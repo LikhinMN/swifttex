@@ -1,0 +1,9 @@
+[package]
+name = "swifttex-renderer-mathml"
+version = "0.3.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+swifttex-parser = { path = "../swifttex-parser" }
+swifttex-lexer = { path = "../swifttex-lexer" }

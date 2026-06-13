@@ -6,6 +6,7 @@ members = [
     "swifttex-layout",
     "swifttex-renderer-svg",
     "swifttex-wasm",
+    "swifttex-renderer-mathml",
 ]
 
 [workspace.metadata]
