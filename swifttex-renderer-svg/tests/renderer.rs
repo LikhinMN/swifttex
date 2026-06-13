@@ -1,4 +1,4 @@
-use swifttex_renderer_svg::render;
+use swifttex_renderer_svg::{render, SvgRenderer};
 
 fn print_snapshot(name: &str, svg: &str) {
     eprintln!("--- SNAPSHOT: {} ---\n{}\n--------------------", name, svg);
@@ -8,7 +8,8 @@ fn print_snapshot(name: &str, svg: &str) {
 fn test_render_single_char() {
     let out = render("x").expect("failed to render");
     print_snapshot("test_render_single_char", &out.svg);
-    assert!(out.svg.contains("<text") || out.svg.contains("<path"));
+    assert!(out.svg.contains("<text"));
+    assert!(out.svg.contains("KaTeX"));
     assert!(out.width > 0.0);
 }
 
@@ -18,6 +19,8 @@ fn test_render_superscript() {
     let out_single = render("x").unwrap();
     print_snapshot("test_render_superscript", &out.svg);
     assert!(out.svg.contains("<svg"));
+    assert!(out.svg.contains("KaTeX_Main")); // The '2'
+    assert!(out.svg.contains("KaTeX_Math")); // The 'x'
     assert!(out.width > out_single.width);
 }
 
@@ -25,6 +28,8 @@ fn test_render_superscript() {
 fn test_render_fraction() {
     let out = render(r"\frac{1}{2}").expect("failed to render");
     print_snapshot("test_render_fraction", &out.svg);
+    assert!(out.svg.contains("KaTeX_Main"));
+    assert!(out.svg.contains("<rect")); // Fraction line
     assert!(out.height > out.width);
 }
 
@@ -39,7 +44,22 @@ fn test_render_sqrt() {
 fn test_render_alpha() {
     let out = render(r"\alpha").expect("failed to render");
     print_snapshot("test_render_alpha", &out.svg);
+    assert!(out.svg.contains("KaTeX_Math"));
     assert!(out.svg.contains("<svg"));
+}
+
+#[test]
+fn test_inline_fonts_true() {
+    let renderer = SvgRenderer::new(16.0, false, true);
+    let out = renderer.render("x").unwrap();
+    assert!(out.svg.contains("@import url"));
+}
+
+#[test]
+fn test_inline_fonts_false() {
+    let renderer = SvgRenderer::new(16.0, false, false);
+    let out = renderer.render("x").unwrap();
+    assert!(!out.svg.contains("@import url"));
 }
 
 #[test]

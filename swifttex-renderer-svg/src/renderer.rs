@@ -6,6 +6,7 @@ use swifttex_layout::metrics::glyph_metrics;
 pub struct SvgRenderer {
     pub font_size: f64,
     pub display_mode: bool,
+    pub inline_fonts: bool,
 }
 
 pub struct RenderOutput {
@@ -15,8 +16,8 @@ pub struct RenderOutput {
 }
 
 impl SvgRenderer {
-    pub fn new(font_size: f64, display_mode: bool) -> Self {
-        Self { font_size, display_mode }
+    pub fn new(font_size: f64, display_mode: bool, inline_fonts: bool) -> Self {
+        Self { font_size, display_mode, inline_fonts }
     }
 
     pub fn render(&self, input: &str) -> Result<RenderOutput, String> {
@@ -37,15 +38,22 @@ impl SvgRenderer {
         
         let escaped_input = escape_html(input);
         
+        let defs = if self.inline_fonts {
+            "<defs>\n    <style>\n      @import url('https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css');\n    </style>\n  </defs>\n  "
+        } else {
+            ""
+        };
+        
         let svg = format!(
             r#"<svg xmlns="http://www.w3.org/2000/svg" width="{w:.3}px" height="{h:.3}px" viewBox="0 0 {w:.3} {h:.3}" role="img" aria-label="{aria}">
-  <title>{title}</title>
+  {defs}<title>{title}</title>
   {inner}
 </svg>"#,
             w = f64::max(total_width, 0.1),
             h = f64::max(total_height, 0.1),
             aria = escaped_input,
             title = escaped_input,
+            defs = defs,
             inner = buf
         );
         
@@ -66,27 +74,24 @@ impl SvgRenderer {
                     self.font_size
                 };
                 
-                match glyph_path_or_text(*ch) {
-                    GlyphRender::Path(d) => {
-                        let scale = local_font_size / 1000.0;
-                        buf.push_str(&format!(
-                            r#"<path d="{d}" transform="translate({x:.3},{y:.3}) scale({scale:.3})"/>"#,
-                            d = d,
-                            x = x,
-                            y = y,
-                            scale = scale
-                        ));
-                    }
-                    GlyphRender::TextFallback(c) => {
-                        buf.push_str(&format!(
-                            r#"<text x="{x:.3}" y="{y:.3}" font-family="KaTeX_Math,serif" font-size="{fs:.3}px" fill="currentColor">{c}</text>"#,
-                            x = x,
-                            y = y,
-                            fs = local_font_size,
-                            c = escape_char(c)
-                        ));
-                    }
-                }
+                let (font_family, font_style) = if ch.is_ascii_alphabetic() {
+                    ("KaTeX_Math", "italic")
+                } else if ('α'..='ω').contains(ch) || ('Α'..='Ω').contains(ch) {
+                    ("KaTeX_Math", "normal")
+                } else {
+                    ("KaTeX_Main", "normal")
+                };
+                
+                let GlyphRender::Text(c) = glyph_path_or_text(*ch);
+                buf.push_str(&format!(
+                    r#"<text x="{x:.3}" y="{y:.3}" font-family="{family}, serif" font-size="{fs:.3}px" font-style="{style}" fill="currentColor">{c}</text>"#,
+                    x = x,
+                    y = y,
+                    family = font_family,
+                    fs = local_font_size,
+                    style = font_style,
+                    c = escape_char(c)
+                ));
             }
             MathBox::HBox { children, .. } => {
                 let mut cursor_x = x;
