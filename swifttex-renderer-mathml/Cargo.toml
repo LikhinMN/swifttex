@@ -3,6 +3,7 @@ name = "swifttex-renderer-mathml"
 version = "0.3.0"
 edition = "2021"
 license = "MIT"
+description = "A MathML rendering engine for SwiftTeX."
 
 [dependencies]
 swifttex-parser = { path = "../swifttex-parser" }

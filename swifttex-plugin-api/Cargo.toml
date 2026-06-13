@@ -3,6 +3,7 @@ name = "swifttex-plugin-api"
 version = "0.3.0"
 edition = "2021"
 license = "MIT"
+description = "Plugin system APIs for SwiftTeX."
 
 [dependencies]
 

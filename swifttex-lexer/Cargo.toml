@@ -3,6 +3,7 @@ name = "swifttex-lexer"
 version = "0.3.0"
 edition = "2021"
 license = "MIT"
+description = "A fast LaTeX math rendering lexer for SwiftTeX."
 repository = "https://github.com/LikhinMN/swifttex"
 
 [dependencies]

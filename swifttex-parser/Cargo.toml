@@ -3,6 +3,7 @@ name = "swifttex-parser"
 version = "0.3.0"
 edition = "2021"
 license = "MIT"
+description = "A LaTeX math expression parser for SwiftTeX."
 repository = "https://github.com/LikhinMN/swifttex"
 
 [dependencies]
