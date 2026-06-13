@@ -1,6 +1,6 @@
 pub mod ast;
 
-use ast::Node;
+use ast::{Node, MatrixEnv, DelimChar, DelimSizing, BigOpKind, AccentKind};
 use swifttex_lexer::{Lexer, Token};
 
 pub struct Parser<'a> {
@@ -76,7 +76,55 @@ impl<'a> Parser<'a> {
                 let cmd = cmd.clone();
                 self.advance();
                 
-                if cmd == "frac" {
+                if cmd == "begin" {
+                    self.parse_matrix()
+                } else if cmd == "left" {
+                    self.parse_left_right()
+                } else if cmd == "big" || cmd == "Big" || cmd == "bigg" || cmd == "Bigg" {
+                    let sizing = match cmd.as_str() {
+                        "big" => 1,
+                        "Big" => 2,
+                        "bigg" => 3,
+                        "Bigg" => 4,
+                        _ => unreachable!(),
+                    };
+                    let open = self.parse_delim_char();
+                    Some(Node::Delimiter {
+                        open,
+                        close: ast::DelimChar::None,
+                        inner: Box::new(Node::Group(vec![])),
+                        sizing: ast::DelimSizing::Fixed(sizing),
+                    })
+                } else if let Some(kind) = self.parse_accent_kind(&cmd) {
+                    let inner = self.parse_group_or_atom().unwrap_or(Node::Group(vec![]));
+                    Some(Node::Accent { kind, inner: Box::new(inner) })
+                } else if is_text_op(&cmd) {
+                    Some(Node::TextOp(cmd.clone()))
+                } else if let Some(space) = parse_space_command(&cmd) {
+                    Some(Node::Spacing(space))
+                } else if let Some(sym) = parse_misc_symbol(&cmd) {
+                    Some(Node::Symbol(sym))
+                } else if let Some(op) = self.parse_big_op_kind(&cmd) {
+                    let mut lower = None;
+                    let mut upper = None;
+                    self.skip_whitespace();
+                    if self.current_token == Token::Underscore {
+                        self.advance();
+                        lower = Some(Box::new(self.parse_group_or_atom().unwrap_or(Node::Group(vec![]))));
+                    } else if self.current_token == Token::Caret {
+                        self.advance();
+                        upper = Some(Box::new(self.parse_group_or_atom().unwrap_or(Node::Group(vec![]))));
+                    }
+                    self.skip_whitespace();
+                    if self.current_token == Token::Underscore && lower.is_none() {
+                        self.advance();
+                        lower = Some(Box::new(self.parse_group_or_atom().unwrap_or(Node::Group(vec![]))));
+                    } else if self.current_token == Token::Caret && upper.is_none() {
+                        self.advance();
+                        upper = Some(Box::new(self.parse_group_or_atom().unwrap_or(Node::Group(vec![]))));
+                    }
+                    return Some(Node::BigOp { op, lower, upper })
+                } else if cmd == "frac" {
                     let numer = self.parse_group_or_atom().unwrap_or_else(|| Node::Group(vec![]));
                     let denom = self.parse_group_or_atom().unwrap_or_else(|| Node::Group(vec![]));
                     Some(Node::Fraction {
@@ -125,9 +173,211 @@ impl<'a> Parser<'a> {
         left
     }
 
+
+    fn parse_matrix(&mut self) -> Option<Node> {
+        let env_name = self.parse_env_name()?;
+        let env = match env_name.as_str() {
+            "matrix" => MatrixEnv::Plain,
+            "pmatrix" => MatrixEnv::Pmatrix,
+            "bmatrix" => MatrixEnv::Bmatrix,
+            "vmatrix" => MatrixEnv::Vmatrix,
+            "cases" => MatrixEnv::Cases,
+            _ => MatrixEnv::Plain,
+        };
+        
+        let mut rows = Vec::new();
+        let mut current_row = Vec::new();
+        let mut current_cell = Vec::new();
+        
+        loop {
+            self.skip_whitespace();
+            match &self.current_token {
+                Token::EOF => break,
+                Token::Command(c) if c == "end" => {
+                    self.advance();
+                    let _end_env = self.parse_env_name();
+                    break;
+                }
+                Token::Ampersand => {
+                    self.advance();
+                    current_row.push(Node::Group(current_cell));
+                    current_cell = Vec::new();
+                }
+                Token::Newline => {
+                    self.advance();
+                    current_row.push(Node::Group(current_cell));
+                    rows.push(current_row);
+                    current_row = Vec::new();
+                    current_cell = Vec::new();
+                }
+                _ => {
+                    if let Some(atom) = self.parse_atom() {
+                        let node = self.parse_postfix(atom);
+                        current_cell.push(node);
+                    } else {
+                        self.advance(); // prevent infinite loop on unknown token
+                    }
+                }
+            }
+        }
+        
+        current_row.push(Node::Group(current_cell));
+        rows.push(current_row);
+        
+        Some(Node::Matrix { rows, env })
+    }
+
+    fn parse_env_name(&mut self) -> Option<String> {
+        self.skip_whitespace();
+        if self.current_token == Token::LBrace {
+            self.advance();
+            let mut name = String::new();
+            while let Token::Letter(c) = self.current_token {
+                name.push(c);
+                self.advance();
+            }
+            if self.current_token == Token::RBrace {
+                self.advance();
+            }
+            Some(name)
+        } else {
+            None
+        }
+    }
+
+    fn parse_left_right(&mut self) -> Option<Node> {
+        let open = self.parse_delim_char();
+        let mut inner_nodes = Vec::new();
+        
+        loop {
+            self.skip_whitespace();
+            if self.current_token == Token::EOF {
+                break;
+            }
+            if let Token::Command(cmd) = &self.current_token {
+                if cmd == "right" {
+                    self.advance();
+                    break;
+                }
+            }
+            if let Some(atom) = self.parse_atom() {
+                let node = self.parse_postfix(atom);
+                inner_nodes.push(node);
+            } else {
+                self.advance();
+            }
+        }
+        
+        let close = self.parse_delim_char();
+        
+        Some(Node::Delimiter {
+            open,
+            close,
+            inner: Box::new(Node::Group(inner_nodes)),
+            sizing: DelimSizing::Auto,
+        })
+    }
+
+    fn parse_delim_char(&mut self) -> DelimChar {
+        self.skip_whitespace();
+        let delim = match &self.current_token {
+            Token::Letter('(') => DelimChar::Paren,
+            Token::Letter(')') => DelimChar::Paren,
+            Token::Letter('[') => DelimChar::Bracket,
+            Token::Letter(']') => DelimChar::Bracket,
+            Token::LBrace => DelimChar::Brace,
+            Token::RBrace => DelimChar::Brace,
+            Token::Letter('|') => DelimChar::Vert,
+            Token::Command(c) if c == "{" || c == "}" || c == "lbrace" || c == "rbrace" => DelimChar::Brace,
+            Token::Command(c) if c == "|" || c == "vert" || c == "Vert" => DelimChar::Vert,
+            Token::Letter(c) if *c == '.' => DelimChar::None, // \left.
+            _ => {
+                // If it's a character that matches delimiter syntax but isn't explicitly checked above
+                if let Token::Letter(c) = self.current_token {
+                    if c == '.' { return { self.advance(); DelimChar::None }; }
+                }
+                DelimChar::None
+            }
+        };
+        self.advance();
+        delim
+    }
+
+    fn parse_big_op_kind(&self, cmd: &str) -> Option<BigOpKind> {
+        match cmd {
+            "sum" => Some(BigOpKind::Sum),
+            "int" => Some(BigOpKind::Integral),
+            "prod" => Some(BigOpKind::Product),
+            "bigcup" => Some(BigOpKind::Union),
+            "bigcap" => Some(BigOpKind::Intersect),
+            _ => None,
+        }
+    }
+
     fn parse_group_or_atom(&mut self) -> Option<Node> {
         self.skip_whitespace();
         self.parse_atom()
+    }
+    fn parse_accent_kind(&self, cmd: &str) -> Option<AccentKind> {
+        match cmd {
+            "hat" => Some(AccentKind::Hat),
+            "bar" => Some(AccentKind::Bar),
+            "vec" => Some(AccentKind::Vec),
+            "dot" => Some(AccentKind::Dot),
+            "ddot" => Some(AccentKind::DDot),
+            "tilde" => Some(AccentKind::Tilde),
+            _ => None,
+        }
+    }
+}
+
+fn is_text_op(cmd: &str) -> bool {
+    matches!(cmd, "sin" | "cos" | "tan" | "log" | "ln" | "exp" | "lim" | "max" | "min" | "inf" | "sup" | "det")
+}
+
+fn parse_space_command(cmd: &str) -> Option<f64> {
+    match cmd {
+        "," => Some(0.167),
+        ":" => Some(0.222),
+        ";" => Some(0.278),
+        "!" => Some(-0.167),
+        "quad" => Some(1.0),
+        "qquad" => Some(2.0),
+        _ => None,
+    }
+}
+
+fn parse_misc_symbol(cmd: &str) -> Option<char> {
+    match cmd {
+        "infty" => Some('∞'),
+        "cdot" => Some('·'),
+        "cdots" => Some('⋯'),
+        "ldots" => Some('…'),
+        "partial" => Some('∂'),
+        "nabla" => Some('∇'),
+        "pm" => Some('±'),
+        "times" => Some('×'),
+        "div" => Some('÷'),
+        "leq" => Some('≤'),
+        "geq" => Some('≥'),
+        "neq" => Some('≠'),
+        "approx" => Some('≈'),
+        "equiv" => Some('≡'),
+        "in" => Some('∈'),
+        "notin" => Some('∉'),
+        "subset" => Some('⊂'),
+        "supset" => Some('⊃'),
+        "cup" => Some('∪'),
+        "cap" => Some('∩'),
+        "to" => Some('→'),
+        "gets" => Some('←'),
+        "Rightarrow" => Some('⇒'),
+        "Leftarrow" => Some('⇐'),
+        "Leftrightarrow" => Some('⟺'),
+        "forall" => Some('∀'),
+        "exists" => Some('∃'),
+        "emptyset" => Some('∅'),
+        _ => None,
     }
 }
 
