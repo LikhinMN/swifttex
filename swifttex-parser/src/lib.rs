@@ -123,7 +123,7 @@ impl<'a> Parser<'a> {
                         self.advance();
                         upper = Some(Box::new(self.parse_group_or_atom().unwrap_or(Node::Group(vec![]))));
                     }
-                    return Some(Node::BigOp { op, lower, upper })
+                    Some(Node::BigOp { op, lower, upper })
                 } else if cmd == "frac" {
                     let numer = self.parse_group_or_atom().unwrap_or_else(|| Node::Group(vec![]));
                     let denom = self.parse_group_or_atom().unwrap_or_else(|| Node::Group(vec![]));
@@ -433,4 +433,9 @@ fn greek_to_char(name: &str) -> Option<char> {
         "Omega" => Some('Ω'),
         _ => None,
     }
+}
+
+pub fn parse_to_nodes(input: &str) -> Vec<ast::Node> {
+    let mut parser = Parser::new(input);
+    parser.parse()
 }
