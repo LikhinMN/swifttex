@@ -1,3 +1,15 @@
+//! Tokenizes a LaTeX math string into a flat stream of [`Token`]s.
+//!
+//! The lexer handles command sequences, grouping delimiters,
+//! script markers, and whitespace collapsing.
+//!
+//! # Examples
+//! ```
+//! use swifttex_lexer::{Lexer, Token};
+//! let mut lex = Lexer::new(r"\frac{1}{2}");
+//! assert!(matches!(lex.next_token(), Token::Command(_)));
+//! ```
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     Letter(char),

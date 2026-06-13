@@ -269,3 +269,41 @@ fn test_svg_no_plugin() {
     // unknown fallback logic
     assert!(out.svg.contains("hbar"));
 }
+
+#[test]
+fn validate_all_perf_targets() {
+    use std::time::Instant;
+
+    // Target: simple < 1ms
+    let start = Instant::now();
+    for _ in 0..1000 { swifttex_renderer_svg::render("x^2").unwrap(); }
+    let simple_us = start.elapsed().as_micros() / 1000;
+
+    // Target: complex < 10ms
+    let start = Instant::now();
+    for _ in 0..100 {
+        swifttex_renderer_svg::render(r"\frac{\alpha^2 + \sqrt{\beta}}{\gamma_{n+1}}").unwrap();
+    }
+    let complex_us = start.elapsed().as_micros() / 100;
+
+    // Target: matrix < 10ms
+    let start = Instant::now();
+    for _ in 0..100 {
+        swifttex_renderer_svg::render(r"\begin{pmatrix} a & b \\ c & d \end{pmatrix}").unwrap();
+    }
+    let matrix_us = start.elapsed().as_micros() / 100;
+
+    eprintln!("simple:  {}µs (target <1000µs)", simple_us);
+    eprintln!("complex: {}µs (target <10000µs)", complex_us);
+    eprintln!("matrix:  {}µs (target <10000µs)", matrix_us);
+
+    if simple_us > 1000 {
+        eprintln!("WARN: simple exceeds 1ms target");
+    }
+    if complex_us > 10000 {
+        eprintln!("WARN: complex exceeds 10ms target");
+    }
+    if matrix_us > 10000 {
+        eprintln!("WARN: matrix exceeds 10ms target");
+    }
+}

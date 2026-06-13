@@ -1,3 +1,12 @@
+//! Parses a tokenized LaTeX math expression into an `Node` tree.
+//!
+//! # Examples
+//! ```
+//! use swifttex_parser::parse_to_nodes;
+//! let nodes = parse_to_nodes(r"\frac{x^2}{y}", None);
+//! assert_eq!(nodes.len(), 1);
+//! ```
+
 pub use swifttex_plugin_api::ast;
 
 use ast::{Node, MatrixEnv, DelimChar, DelimSizing, BigOpKind, AccentKind};
@@ -496,6 +505,7 @@ fn greek_to_char(name: &str) -> Option<char> {
         _ => None,
     }
 }
+
 
 pub fn parse_to_nodes(input: &str, registry: Option<Arc<Mutex<PluginRegistry>>>) -> Vec<Node> {
     let mut parser = Parser::with_registry(input, registry);

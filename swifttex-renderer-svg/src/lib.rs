@@ -1,3 +1,14 @@
+//! Renders a LaTeX math expression to an SVG string.
+//!
+//! Uses KaTeX webfonts for glyph rendering.
+//!
+//! # Examples
+//! ```
+//! use swifttex_renderer_svg::render;
+//! let output = render(r"\frac{x^2}{y}").unwrap();
+//! assert!(output.svg.contains("<svg"));
+//! ```
+
 pub mod glyph_paths;
 pub mod renderer;
 

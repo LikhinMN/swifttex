@@ -1,3 +1,19 @@
+//! Plugin API for extending SwiftTeX with custom commands,
+//! symbols, and environments.
+//!
+//! # Quick Start
+//! ```
+//! use swifttex_plugin_api::{Plugin, SymbolHandler, PluginRegistry};
+//!
+//! struct MyPlugin;
+//! impl Plugin for MyPlugin {
+//!     fn name(&self) -> &str { "my-plugin" }
+//! }
+//!
+//! let mut registry = PluginRegistry::new();
+//! registry.register(Box::new(MyPlugin));
+//! ```
+
 pub mod ast;
 pub use ast::Node;
 use std::collections::HashMap;

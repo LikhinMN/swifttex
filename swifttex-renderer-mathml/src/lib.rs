@@ -1,3 +1,15 @@
+//! Renders a LaTeX math expression to a MathML string.
+//!
+//! Output is valid MathML 3.0 with xmlns attribute,
+//! suitable for embedding in HTML5 documents.
+//!
+//! # Examples
+//! ```
+//! use swifttex_renderer_mathml::MathMLRenderer;
+//! let out = MathMLRenderer::new(false).render(r"x^2").unwrap();
+//! assert!(out.mathml.contains("<math"));
+//! ```
+
 use swifttex_parser::ast::*;
 use swifttex_parser::Parser;
 use swifttex_plugin_api::PluginRegistry;
