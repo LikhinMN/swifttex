@@ -2,6 +2,7 @@ pub mod boxes;
 pub mod katex_metrics;
 pub mod layout;
 pub mod metrics;
+pub mod style;
 
 pub use boxes::MathBox;
 pub use layout::LayoutEngine;

@@ -143,3 +143,131 @@ fn test_katex_font_styles_differ() {
     let m_main = swifttex_layout::metrics::glyph_metrics('1');
     assert!((m_math.width - m_main.width).abs() > 0.001);
 }
+
+#[test]
+fn test_matrix_layout() {
+    let nodes = swifttex_parser::Parser::new(r"\begin{pmatrix} a & b \\ c & d \end{pmatrix}").parse();
+    let layout = swifttex_layout::layout_nodes(&nodes);
+    let inner = match &layout {
+        swifttex_layout::MathBox::HBox { children, .. } => &children[0],
+        _ => panic!("Expected HBox"),
+    };
+    match inner {
+        swifttex_layout::MathBox::Matrix { col_widths, row_heights, total_width, .. } => {
+            assert_eq!(col_widths.len(), 2);
+            assert_eq!(row_heights.len(), 2);
+            let single_col_width = col_widths[0];
+            assert!(*total_width > single_col_width);
+        }
+        _ => panic!("Expected MatrixBox"),
+    }
+}
+
+#[test]
+fn test_big_op_layout() {
+    let nodes_display = swifttex_parser::Parser::new(r"\sum_{i=0}^{n}").parse();
+    let layout_display = swifttex_layout::LayoutEngine::new(16.0, true).layout_nodes(&nodes_display);
+    
+    let nodes_inline = swifttex_parser::Parser::new(r"\sum_{i=0}^{n}").parse();
+    let layout_inline = swifttex_layout::LayoutEngine::new(16.0, false).layout_nodes(&nodes_inline);
+    
+    let inner_d = match &layout_display {
+        swifttex_layout::MathBox::HBox { children, .. } => &children[0],
+        _ => panic!("Expected HBox"),
+    };
+    let inner_i = match &layout_inline {
+        swifttex_layout::MathBox::HBox { children, .. } => &children[0],
+        _ => panic!("Expected HBox"),
+    };
+    
+    match (inner_d, inner_i) {
+        (swifttex_layout::MathBox::BigOp { op_box: op_d, .. }, swifttex_layout::MathBox::BigOp { op_box: op_i, .. }) => {
+            assert!(op_d.height() > op_i.height());
+        }
+        _ => panic!("Expected BigOp boxes"),
+    }
+}
+
+
+#[test]
+fn test_style_cascade_fraction() {
+    let nodes = parse(r"\frac{a}{b}");
+    let engine = LayoutEngine::new(16.0, true);
+    let layout = engine.layout_nodes(&nodes);
+    let inner = match &layout {
+        swifttex_layout::MathBox::HBox { children, .. } => &children[0],
+        _ => panic!("Expected HBox"),
+    };
+    match inner {
+        swifttex_layout::MathBox::VBox { children, .. } => {
+            let num = match &children[0] {
+                swifttex_layout::MathBox::ShiftedBox { inner, .. } => inner,
+                _ => panic!("Expected ShiftedBox"),
+            };
+            let num_h_box = match &**num {
+                swifttex_layout::MathBox::HBox { children, .. } => &children[0],
+                _ => panic!("Expected HBox in numerator"),
+            };
+            let height = num_h_box.height();
+            assert!(height > 5.0 && height < 16.0);
+        }
+        _ => panic!("Expected VBox"),
+    }
+}
+
+#[test]
+fn test_superscript_display() {
+    let nodes = parse("x^2");
+    let layout = LayoutEngine::new(16.0, true).layout_nodes(&nodes);
+    let inner = match &layout {
+        swifttex_layout::MathBox::HBox { children, .. } => &children[0],
+        _ => panic!("Expected HBox"),
+    };
+    match inner {
+        swifttex_layout::MathBox::HBox { children, .. } => {
+            let exp = match &children[1] {
+                swifttex_layout::MathBox::ShiftedBox { inner, .. } => inner,
+                _ => panic!("Expected ShiftedBox"),
+            };
+            let exp_height = match &**exp {
+                swifttex_layout::MathBox::Glyph { height, .. } => *height,
+                _ => panic!("Expected Glyph for exp"),
+            };
+            assert!(exp_height < 10.0);
+        }
+        _ => panic!("Expected HBox"),
+    }
+}
+
+#[test]
+fn test_text_op_layout() {
+    let nodes = parse(r"\sin x");
+    let layout = LayoutEngine::new(16.0, true).layout_nodes(&nodes);
+    let inner = match &layout {
+        swifttex_layout::MathBox::HBox { children, .. } => &children[0],
+        _ => panic!("Expected HBox"),
+    };
+    match inner {
+        swifttex_layout::MathBox::HBox { children, .. } => {
+            match &children[0] {
+                swifttex_layout::MathBox::TextOp { text, .. } => assert_eq!(text, "sin"),
+                _ => panic!("Expected TextOp box"),
+            }
+        }
+        _ => panic!("Expected HBox"),
+    }
+}
+
+#[test]
+fn test_spacing_layout() {
+    let nodes = parse(r"x \quad y");
+    let layout = LayoutEngine::new(16.0, true).layout_nodes(&nodes);
+    let inner = match &layout {
+        swifttex_layout::MathBox::HBox { children, .. } => children,
+        _ => panic!("Expected HBox"),
+    };
+    match &inner[1] {
+        swifttex_layout::MathBox::Glue { width } => assert!((*width - 16.0).abs() < 1e-6),
+        _ => panic!("Expected Glue"),
+    }
+}
