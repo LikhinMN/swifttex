@@ -19,5 +19,9 @@ export interface RenderError {
   error: string;
 }
 
-export function render(input: string, opts?: RenderOptions): RenderResult | RenderError;
+export function render(input: string, options?: RenderOptions): RenderResult | RenderError;
+
+export function register_symbol(name: string, unicode_char: string): void;
+export function list_plugins(): string[];
+export function reset_registry(): void;
 export function version(): string;

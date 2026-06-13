@@ -40,6 +40,37 @@ pub struct RenderError {
     pub error: String,
 }
 
+use std::sync::{Arc, Mutex, OnceLock};
+use swifttex_plugin_api::PluginRegistry;
+
+static REGISTRY: OnceLock<Arc<Mutex<PluginRegistry>>> = OnceLock::new();
+
+fn get_registry() -> Arc<Mutex<PluginRegistry>> {
+    REGISTRY.get_or_init(|| Arc::new(Mutex::new(PluginRegistry::new()))).clone()
+}
+
+#[wasm_bindgen]
+pub fn register_symbol(name: &str, unicode_char: &str) {
+    let ch = unicode_char.chars().next().unwrap_or('?');
+    let registry = get_registry();
+    let mut reg = registry.lock().unwrap();
+    reg.register_symbol_direct(name.to_string(), ch);
+}
+
+#[wasm_bindgen]
+pub fn list_plugins() -> JsValue {
+    let registry = get_registry();
+    let reg = registry.lock().unwrap();
+    serde_wasm_bindgen::to_value(&reg.registered_plugins()).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn reset_registry() {
+    let registry = get_registry();
+    let mut reg = registry.lock().unwrap();
+    *reg = PluginRegistry::new();
+}
+
 #[wasm_bindgen]
 pub fn render(input: &str, opts: JsValue) -> JsValue {
     let options: RenderOptions = serde_wasm_bindgen::from_value(opts)
@@ -53,10 +84,14 @@ pub fn render(input: &str, opts: JsValue) -> JsValue {
                                 else { swifttex_layout::style::MathStyle::Text },
     };
 
+    let registry = get_registry();
+
     let renderer_svg = swifttex_renderer_svg::SvgRenderer::new(options.font_size, options.display_mode, options.inline_fonts)
-        .with_math_style(style);
+        .with_math_style(style)
+        .with_registry(registry.clone());
     
-    let renderer_mathml = swifttex_renderer_mathml::MathMLRenderer::new(options.display_mode);
+    let renderer_mathml = swifttex_renderer_mathml::MathMLRenderer::new(options.display_mode)
+        .with_registry(registry.clone());
 
     match options.output {
         OutputFormat::Svg => {
