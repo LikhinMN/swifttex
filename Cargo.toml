@@ -1,0 +1,9 @@
+[workspace]
+resolver = "2"
+members = [
+    "swifttex-lexer",
+    "swifttex-parser",
+    "swifttex-layout",
+    "swifttex-renderer-svg",
+    "swifttex-wasm",
+]
