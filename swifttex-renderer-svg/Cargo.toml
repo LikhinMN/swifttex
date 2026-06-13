@@ -2,8 +2,17 @@
 name = "swifttex-renderer-svg"
 version = "0.1.0"
 edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/LikhinMN/swifttex"
 
 [dependencies]
 swifttex-layout = { path = "../swifttex-layout" }
 swifttex-parser = { path = "../swifttex-parser" }
 swifttex-lexer = { path = "../swifttex-lexer" }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "render_bench"
+harness = false

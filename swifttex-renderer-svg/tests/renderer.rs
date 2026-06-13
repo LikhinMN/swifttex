@@ -78,3 +78,31 @@ fn test_render_deterministic() {
         assert_eq!(first_out.svg, out.svg);
     }
 }
+
+#[test]
+fn test_performance_simple() {
+    use std::time::Instant;
+    let start = Instant::now();
+    for _ in 0..1000 {
+        render("x^2").unwrap();
+    }
+    let avg = start.elapsed().as_micros() / 1000;
+    eprintln!("simple avg: {}µs", avg);
+    if avg > 1000 {
+        eprintln!("WARNING: simple render exceeded 1ms target ({}µs)", avg);
+    }
+}
+
+#[test]
+fn test_performance_complex() {
+    use std::time::Instant;
+    let start = Instant::now();
+    for _ in 0..100 {
+        render(r"\frac{\alpha^2 + \sqrt{\beta}}{\gamma_{n+1}}").unwrap();
+    }
+    let avg = start.elapsed().as_micros() / 100;
+    eprintln!("complex avg: {}µs", avg);
+    if avg > 10000 {
+        eprintln!("WARNING: complex render exceeded 10ms target ({}µs)", avg);
+    }
+}

@@ -8,6 +8,9 @@ members = [
     "swifttex-wasm",
 ]
 
+[workspace.metadata]
+description = "SwiftTeX — Fast LaTeX math rendering, Rust/WASM"
+
 [profile.release]
 opt-level = "z"
 lto = true
