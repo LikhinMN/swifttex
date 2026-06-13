@@ -9,6 +9,7 @@ repository = "https://github.com/LikhinMN/swifttex"
 swifttex-layout = { path = "../swifttex-layout" }
 swifttex-parser = { path = "../swifttex-parser" }
 swifttex-lexer = { path = "../swifttex-lexer" }
+swifttex-plugin-api = { path = "../swifttex-plugin-api" }
 swifttex-renderer-mathml = { path = "../swifttex-renderer-mathml" }
 
 [dev-dependencies]

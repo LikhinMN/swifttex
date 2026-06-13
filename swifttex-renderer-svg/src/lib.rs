@@ -19,13 +19,19 @@ pub struct AccessibleOutput {
     pub aria_label: String,
 }
 
-pub fn render_accessible(input: &str) -> Result<AccessibleOutput, String> {
-    let nodes = swifttex_parser::parse_to_nodes(input);
+pub fn render_accessible(input: &str, registry: Option<std::sync::Arc<std::sync::Mutex<swifttex_plugin_api::PluginRegistry>>>) -> Result<AccessibleOutput, String> {
+    let nodes = swifttex_parser::parse_to_nodes(input, registry.clone());
     
-    let svg_renderer = SvgRenderer::new(16.0, true, true);
+    let mut svg_renderer = SvgRenderer::new(16.0, true, true);
+    if let Some(reg) = registry.clone() {
+        svg_renderer = svg_renderer.with_registry(reg);
+    }
     let svg_out = svg_renderer.render_from_nodes(input, &nodes)?;
     
-    let mathml_renderer = swifttex_renderer_mathml::MathMLRenderer::new(true);
+    let mut mathml_renderer = swifttex_renderer_mathml::MathMLRenderer::new(true);
+    if let Some(reg) = registry {
+        mathml_renderer = mathml_renderer.with_registry(reg);
+    }
     let mathml_out = mathml_renderer.render_from_nodes(input, &nodes)?;
     
     let aria_label = renderer::generate_aria_label(&nodes);

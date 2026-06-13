@@ -1,8 +1,11 @@
-use swifttex_parser::ast::{Node, AccentKind, MatrixEnv, DelimChar, BigOpKind};
+use swifttex_parser::ast::*;
 use swifttex_parser::Parser;
+use swifttex_plugin_api::PluginRegistry;
+use std::sync::{Arc, Mutex};
 
 pub struct MathMLRenderer {
     pub display_mode: bool,
+    pub registry: Option<Arc<Mutex<PluginRegistry>>>,
 }
 
 pub struct MathMLOutput {
@@ -12,11 +15,16 @@ pub struct MathMLOutput {
 
 impl MathMLRenderer {
     pub fn new(display_mode: bool) -> Self {
-        Self { display_mode }
+        Self { display_mode, registry: None }
+    }
+
+    pub fn with_registry(mut self, registry: Arc<Mutex<PluginRegistry>>) -> Self {
+        self.registry = Some(registry);
+        self
     }
 
     pub fn render(&self, input: &str) -> Result<MathMLOutput, String> {
-        let mut parser = Parser::new(input);
+        let mut parser = Parser::with_registry(input, self.registry.clone());
         let nodes = parser.parse();
         self.render_from_nodes(input, &nodes)
     }

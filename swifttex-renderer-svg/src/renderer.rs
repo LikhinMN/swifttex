@@ -4,11 +4,15 @@ use swifttex_parser::Parser;
 use swifttex_layout::metrics::glyph_metrics;
 
 use swifttex_layout::style::MathStyle;
+use swifttex_plugin_api::PluginRegistry;
+use std::sync::{Arc, Mutex};
+
 pub struct SvgRenderer {
     pub font_size: f64,
     pub display_mode: bool,
     pub inline_fonts: bool,
     pub math_style: Option<MathStyle>,
+    pub registry: Option<Arc<Mutex<PluginRegistry>>>,
 }
 
 pub struct RenderOutput {
@@ -19,7 +23,12 @@ pub struct RenderOutput {
 
 impl SvgRenderer {
     pub fn new(font_size: f64, display_mode: bool, inline_fonts: bool) -> Self {
-        Self { font_size, display_mode, inline_fonts, math_style: None }
+        Self { font_size, display_mode, inline_fonts, math_style: None, registry: None }
+    }
+    
+    pub fn with_registry(mut self, registry: Arc<Mutex<PluginRegistry>>) -> Self {
+        self.registry = Some(registry);
+        self
     }
     
     pub fn with_math_style(mut self, style: MathStyle) -> Self {
@@ -28,7 +37,7 @@ impl SvgRenderer {
     }
 
     pub fn render(&self, input: &str) -> Result<RenderOutput, String> {
-        let mut parser = Parser::new(input);
+        let mut parser = Parser::with_registry(input, self.registry.clone());
         let nodes = parser.parse();
         self.render_from_nodes(input, &nodes)
     }

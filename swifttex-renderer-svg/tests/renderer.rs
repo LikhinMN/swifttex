@@ -206,18 +206,66 @@ fn test_render_spacing() {
 
 #[test]
 fn test_aria_label_superscript() {
-    let out = swifttex_renderer_svg::render_accessible("x^2").unwrap();
+    let out = swifttex_renderer_svg::render_accessible("x^2", None).unwrap();
     assert!(out.aria_label.contains("to the power of"));
 }
 
 #[test]
 fn test_aria_label_fraction() {
-    let out = swifttex_renderer_svg::render_accessible(r"\frac{1}{2}").unwrap();
+    let out = swifttex_renderer_svg::render_accessible(r"\frac{1}{2}", None).unwrap();
     assert!(out.aria_label.contains("fraction"));
 }
 
 #[test]
 fn test_aria_label_sqrt() {
-    let out = swifttex_renderer_svg::render_accessible(r"\sqrt{x}").unwrap();
+    let out = swifttex_renderer_svg::render_accessible(r"\sqrt{x}", None).unwrap();
     assert!(out.aria_label.contains("square root"));
+}
+
+use swifttex_plugin_api::{PluginRegistry, Plugin, CommandHandler, Node, SymbolHandler};
+use std::sync::{Arc, Mutex};
+
+pub struct PhysicsPlugin;
+impl Plugin for PhysicsPlugin {
+    fn name(&self) -> &str { "physics" }
+    fn symbols(&self) -> Vec<Box<dyn SymbolHandler>> {
+        struct HbarSymbol;
+        impl SymbolHandler for HbarSymbol {
+            fn name(&self) -> &str { "hbar" }
+            fn resolve(&self) -> char { 'ℏ' }
+        }
+        vec![Box::new(HbarSymbol)]
+    }
+    fn commands(&self) -> Vec<Box<dyn CommandHandler>> {
+        struct BraCommand;
+        impl CommandHandler for BraCommand {
+            fn name(&self) -> &str { "bra" }
+            fn arity(&self) -> usize { 1 }
+            fn expand(&self, args: Vec<Vec<Node>>) -> Node {
+                let inner = args.into_iter().next().unwrap_or_default();
+                Node::Group(vec![Node::Symbol('⟨'), Node::Group(inner), Node::Symbol('|')])
+            }
+        }
+        vec![Box::new(BraCommand)]
+    }
+}
+
+#[test]
+fn test_svg_plugin() {
+    let mut registry = PluginRegistry::new();
+    registry.register(Box::new(PhysicsPlugin));
+    let renderer = swifttex_renderer_svg::SvgRenderer::new(16.0, false, false)
+        .with_registry(Arc::new(Mutex::new(registry)));
+    
+    let out = renderer.render(r"\bra{x}").unwrap();
+    assert!(out.svg.contains("⟨"));
+    assert!(out.svg.contains("|"));
+}
+
+#[test]
+fn test_svg_no_plugin() {
+    let renderer = swifttex_renderer_svg::SvgRenderer::new(16.0, false, false);
+    let out = renderer.render(r"\hbar").unwrap();
+    // unknown fallback logic
+    assert!(out.svg.contains("hbar"));
 }
