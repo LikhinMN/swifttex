@@ -1,11 +1,16 @@
+export type OutputFormat = "svg" | "mathml" | "both";
+
 export interface RenderOptions {
   font_size?: number;
   display_mode?: boolean;
   inline_fonts?: boolean;
+  math_style?: "display" | "text" | "script" | "scriptscript";
+  output?: OutputFormat;
 }
 
 export interface RenderResult {
-  svg: string;
+  svg?: string;
+  mathml?: string;
   width: number;
   height: number;
 }
