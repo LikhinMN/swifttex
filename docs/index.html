@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwiftTeX — Beautiful Mathematics, Native Speed.</title>
+    <meta name="description" content="Fast, accurate LaTeX math rendering written in Rust, compiled to WebAssembly.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="swifttex.css">
+    <link rel="stylesheet" href="site.css">
+</head>
+<body>
+    <div class="background-mesh"></div>
+    
+    <header class="glass-header">
+        <div class="header-container">
+            <div class="logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="url(#paint0_linear)"/>
+                    <path d="M2 17L12 22L22 17" stroke="url(#paint1_linear)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 12L12 17L22 12" stroke="url(#paint2_linear)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <defs>
+                        <linearGradient id="paint0_linear" x1="12" y1="2" x2="12" y2="12" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#00F0FF"/>
+                            <stop offset="1" stop-color="#0055FF"/>
+                        </linearGradient>
+                        <linearGradient id="paint1_linear" x1="12" y1="17" x2="12" y2="22" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#FF007A"/>
+                            <stop offset="1" stop-color="#7A00FF"/>
+                        </linearGradient>
+                        <linearGradient id="paint2_linear" x1="12" y1="12" x2="12" y2="17" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#00F0FF"/>
+                            <stop offset="1" stop-color="#FF007A"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <h1>SwiftTeX</h1>
+            </div>
+            <nav>
+                <a href="#playground">Playground</a>
+                <a href="#docs">Documentation</a>
+                <a href="https://github.com/LikhinMN/swifttex" target="_blank" class="github-btn">GitHub</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <h2 class="gradient-text">Beautiful Mathematics.<br>Native Speed.</h2>
+            <p>A blazingly fast LaTeX to SVG/MathML renderer built with Rust and WebAssembly.</p>
+            <div class="hero-actions">
+                <a href="#playground" class="btn btn-primary">Try it Live</a>
+                <a href="#docs" class="btn btn-secondary">Read Docs</a>
+            </div>
+        </section>
+
+        <section id="playground" class="playground-section">
+            <div class="glass-card playground-container">
+                <div class="playground-header">
+                    <h3>Interactive Playground</h3>
+                    <div class="controls">
+                        <label>
+                            <input type="checkbox" id="display-mode" checked> Display Mode
+                        </label>
+                        <select id="output-format">
+                            <option value="svg">SVG</option>
+                            <option value="mathml">MathML</option>
+                            <option value="both">Both (Accessible)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="playground-body">
+                    <div class="editor-pane">
+                        <textarea id="latex-input" spellcheck="false">
+\frac{\partial}{\partial t} \int_V \rho \, dV + \oint_S \rho \vec{v} \cdot d\vec{S} = 0
+                        </textarea>
+                    </div>
+                    <div class="preview-pane">
+                        <div id="render-output" class="render-output"></div>
+                        <div id="error-output" class="error-output"></div>
+                        <div class="metrics" id="render-metrics">Rendered in 0.0ms</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="docs" class="docs-section">
+            <div class="glass-card docs-container">
+                <h2>Quick Start</h2>
+                <p>SwiftTeX leverages KaTeX font metrics and web assembly for absolute precision.</p>
+                
+                <div class="code-block">
+                    <pre><code>npm install swifttex</code></pre>
+                </div>
+
+                <h3>Usage</h3>
+                <div class="code-block">
+                    <pre><code>import init, { render } from "swifttex";
+
+// Initialize the WASM module
+await init();
+
+// Render to SVG
+const { svg } = render("\\frac{x^2}{y}", { 
+    display_mode: true, 
+    output: "svg" 
+});
+
+document.getElementById("math").innerHTML = svg;</code></pre>
+                </div>
+
+                <h3>Plugin API</h3>
+                <p>Register custom macros and symbols on the fly.</p>
+                <div class="code-block">
+                    <pre><code>import { register_symbol } from "swifttex";
+
+// Map \hbar to its unicode equivalent
+register_symbol("hbar", "ℏ");
+const result = render("\\hbar");</code></pre>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>SwiftTeX — Released under MIT. Built with Rust.</p>
+    </footer>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
