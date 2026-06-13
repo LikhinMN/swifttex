@@ -17,13 +17,13 @@ Fast, accurate LaTeX math rendering — written in Rust, compiled to WebAssembly
 ## Install
 
 ```bash
-npm install swifttex
+npm install swifttex-wasm
 ```
 
 ## Quick Start
 
 ```js
-import init, { render } from "swifttex";
+import init, { render } from "swifttex-wasm";
 await init();
 
 // SVG output
@@ -44,7 +44,7 @@ const result = render(String.raw`\frac{x^2}{y}`, {
 ## Plugin API
 
 ```js
-import { register_symbol } from "swifttex";
+import { register_symbol } from "swifttex-wasm";
 register_symbol("hbar", "ℏ");
 
 const { svg } = render(String.raw`\hbar`);
