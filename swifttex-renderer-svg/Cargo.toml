@@ -1,6 +1,6 @@
 [package]
 name = "swifttex-renderer-svg"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/LikhinMN/swifttex"
@@ -9,6 +9,7 @@ repository = "https://github.com/LikhinMN/swifttex"
 swifttex-layout = { path = "../swifttex-layout" }
 swifttex-parser = { path = "../swifttex-parser" }
 swifttex-lexer = { path = "../swifttex-lexer" }
+swifttex-renderer-mathml = { path = "../swifttex-renderer-mathml" }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
