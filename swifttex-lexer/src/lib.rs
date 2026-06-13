@@ -7,6 +7,8 @@ pub enum Token {
     RBrace,
     Caret,
     Underscore,
+    Ampersand,
+    Newline,
     Whitespace,
     EOF,
 }
@@ -54,6 +56,11 @@ impl<'a> Lexer<'a> {
                 None => return Token::Command("".to_string()),
             };
             
+            if next_c == '\\' {
+                self.advance(next_c);
+                return Token::Newline;
+            }
+            
             let mut cmd = String::new();
             if next_c.is_ascii_alphabetic() {
                 while let Some(nc) = self.peek_char() {
@@ -77,6 +84,7 @@ impl<'a> Lexer<'a> {
             '}' => Token::RBrace,
             '^' => Token::Caret,
             '_' => Token::Underscore,
+            '&' => Token::Ampersand,
             x if x.is_ascii_alphabetic() => Token::Letter(x),
             x if x.is_ascii_digit() => Token::Digit(x),
             x => Token::Letter(x),
