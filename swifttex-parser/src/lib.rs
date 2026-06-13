@@ -1,21 +1,26 @@
-pub mod ast;
+pub use swifttex_plugin_api::ast;
 
 use ast::{Node, MatrixEnv, DelimChar, DelimSizing, BigOpKind, AccentKind};
 use swifttex_lexer::{Lexer, Token};
 
+use std::sync::{Arc, Mutex};
+use swifttex_plugin_api::PluginRegistry;
+
 pub struct Parser<'a> {
     lexer: Lexer<'a>,
     current_token: Token,
+    registry: Option<Arc<Mutex<PluginRegistry>>>,
 }
 
 impl<'a> Parser<'a> {
     pub fn new(input: &'a str) -> Self {
+        Self::with_registry(input, None)
+    }
+
+    pub fn with_registry(input: &'a str, registry: Option<Arc<Mutex<PluginRegistry>>>) -> Self {
         let mut lexer = Lexer::new(input);
         let current_token = lexer.next_token();
-        Self {
-            lexer,
-            current_token,
-        }
+        Self { lexer, current_token, registry }
     }
 
     fn advance(&mut self) {
@@ -77,7 +82,7 @@ impl<'a> Parser<'a> {
                 self.advance();
                 
                 if cmd == "begin" {
-                    self.parse_matrix()
+                    self.parse_environment()
                 } else if cmd == "left" {
                     self.parse_left_right()
                 } else if cmd == "big" || cmd == "Big" || cmd == "bigg" || cmd == "Bigg" {
@@ -137,6 +142,30 @@ impl<'a> Parser<'a> {
                 } else if let Some(c) = greek_to_char(&cmd) {
                     Some(Node::Symbol(c))
                 } else {
+                    let registry_opt = self.registry.clone();
+                    if let Some(registry) = registry_opt {
+                        let reg = registry.lock().unwrap();
+                        if let Some(c) = reg.resolve_symbol(&cmd) {
+                            return Some(Node::Symbol(c));
+                        }
+                        if reg.has_command(&cmd) {
+                            let arity = reg.command_arity(&cmd).unwrap_or(0);
+                            drop(reg); // unlock before parsing inner args
+                            
+                            let mut args = Vec::new();
+                            for _ in 0..arity {
+                                let arg_node = self.parse_group_or_atom().unwrap_or(Node::Group(vec![]));
+                                let inner = match arg_node {
+                                    Node::Group(g) => g,
+                                    n => vec![n],
+                                };
+                                args.push(inner);
+                            }
+                            
+                            let reg = registry.lock().unwrap();
+                            return Some(reg.resolve_command(&cmd, args).unwrap());
+                        }
+                    }
                     Some(Node::Unknown(cmd))
                 }
             }
@@ -174,57 +203,90 @@ impl<'a> Parser<'a> {
     }
 
 
-    fn parse_matrix(&mut self) -> Option<Node> {
+    fn parse_environment(&mut self) -> Option<Node> {
         let env_name = self.parse_env_name()?;
-        let env = match env_name.as_str() {
-            "matrix" => MatrixEnv::Plain,
-            "pmatrix" => MatrixEnv::Pmatrix,
-            "bmatrix" => MatrixEnv::Bmatrix,
-            "vmatrix" => MatrixEnv::Vmatrix,
-            "cases" => MatrixEnv::Cases,
-            _ => MatrixEnv::Plain,
-        };
+        let is_matrix = matches!(env_name.as_str(), "matrix" | "pmatrix" | "bmatrix" | "vmatrix" | "cases");
         
-        let mut rows = Vec::new();
-        let mut current_row = Vec::new();
-        let mut current_cell = Vec::new();
-        
-        loop {
-            self.skip_whitespace();
-            match &self.current_token {
-                Token::EOF => break,
-                Token::Command(c) if c == "end" => {
-                    self.advance();
-                    let _end_env = self.parse_env_name();
-                    break;
-                }
-                Token::Ampersand => {
-                    self.advance();
-                    current_row.push(Node::Group(current_cell));
-                    current_cell = Vec::new();
-                }
-                Token::Newline => {
-                    self.advance();
-                    current_row.push(Node::Group(current_cell));
-                    rows.push(current_row);
-                    current_row = Vec::new();
-                    current_cell = Vec::new();
-                }
-                _ => {
-                    if let Some(atom) = self.parse_atom() {
-                        let node = self.parse_postfix(atom);
-                        current_cell.push(node);
-                    } else {
-                        self.advance(); // prevent infinite loop on unknown token
+        if is_matrix {
+            let env = match env_name.as_str() {
+                "matrix" => MatrixEnv::Plain,
+                "pmatrix" => MatrixEnv::Pmatrix,
+                "bmatrix" => MatrixEnv::Bmatrix,
+                "vmatrix" => MatrixEnv::Vmatrix,
+                "cases" => MatrixEnv::Cases,
+                _ => unreachable!(),
+            };
+            
+            let mut rows = Vec::new();
+            let mut current_row = Vec::new();
+            let mut current_cell = Vec::new();
+            
+            loop {
+                self.skip_whitespace();
+                match &self.current_token {
+                    Token::EOF => break,
+                    Token::Command(c) if c == "end" => {
+                        self.advance();
+                        let _end_env = self.parse_env_name();
+                        break;
+                    }
+                    Token::Ampersand => {
+                        self.advance();
+                        current_row.push(Node::Group(current_cell));
+                        current_cell = Vec::new();
+                    }
+                    Token::Newline => {
+                        self.advance();
+                        current_row.push(Node::Group(current_cell));
+                        rows.push(current_row);
+                        current_row = Vec::new();
+                        current_cell = Vec::new();
+                    }
+                    _ => {
+                        if let Some(atom) = self.parse_atom() {
+                            let node = self.parse_postfix(atom);
+                            current_cell.push(node);
+                        } else {
+                            self.advance();
+                        }
                     }
                 }
             }
+            
+            current_row.push(Node::Group(current_cell));
+            rows.push(current_row);
+            
+            Some(Node::Matrix { rows, env })
+        } else {
+            let mut inner = Vec::new();
+            loop {
+                self.skip_whitespace();
+                match &self.current_token {
+                    Token::EOF => break,
+                    Token::Command(c) if c == "end" => {
+                        self.advance();
+                        let _end_env = self.parse_env_name();
+                        break;
+                    }
+                    _ => {
+                        if let Some(atom) = self.parse_atom() {
+                            let node = self.parse_postfix(atom);
+                            inner.push(node);
+                        } else {
+                            self.advance();
+                        }
+                    }
+                }
+            }
+            let registry_opt = self.registry.clone();
+            if let Some(registry) = registry_opt {
+                let reg = registry.lock().unwrap();
+                if reg.has_environment(&env_name) {
+                    return reg.resolve_environment(&env_name, inner);
+                }
+            }
+            Some(Node::Group(inner))
         }
-        
-        current_row.push(Node::Group(current_cell));
-        rows.push(current_row);
-        
-        Some(Node::Matrix { rows, env })
     }
 
     fn parse_env_name(&mut self) -> Option<String> {
@@ -435,7 +497,7 @@ fn greek_to_char(name: &str) -> Option<char> {
     }
 }
 
-pub fn parse_to_nodes(input: &str) -> Vec<ast::Node> {
-    let mut parser = Parser::new(input);
+pub fn parse_to_nodes(input: &str, registry: Option<Arc<Mutex<PluginRegistry>>>) -> Vec<Node> {
+    let mut parser = Parser::with_registry(input, registry);
     parser.parse()
 }
