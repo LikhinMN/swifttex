@@ -3,10 +3,12 @@ use swifttex_layout::{LayoutEngine, MathBox};
 use swifttex_parser::Parser;
 use swifttex_layout::metrics::glyph_metrics;
 
+use swifttex_layout::style::MathStyle;
 pub struct SvgRenderer {
     pub font_size: f64,
     pub display_mode: bool,
     pub inline_fonts: bool,
+    pub math_style: Option<MathStyle>,
 }
 
 pub struct RenderOutput {
@@ -17,14 +19,22 @@ pub struct RenderOutput {
 
 impl SvgRenderer {
     pub fn new(font_size: f64, display_mode: bool, inline_fonts: bool) -> Self {
-        Self { font_size, display_mode, inline_fonts }
+        Self { font_size, display_mode, inline_fonts, math_style: None }
+    }
+    
+    pub fn with_math_style(mut self, style: MathStyle) -> Self {
+        self.math_style = Some(style);
+        self
     }
 
     pub fn render(&self, input: &str) -> Result<RenderOutput, String> {
         let mut parser = Parser::new(input);
         let nodes = parser.parse();
         
-        let engine = LayoutEngine::new(self.font_size, self.display_mode);
+        let mut engine = LayoutEngine::new(self.font_size, self.display_mode);
+        if let Some(s) = self.math_style {
+            engine = engine.with_style(s);
+        }
         let root_box = engine.layout_nodes(&nodes);
         
         let mut buf = String::new();
@@ -122,6 +132,168 @@ impl SvgRenderer {
                 self.render_box(inner, x + shift_x, y - shift_y, buf);
             }
             MathBox::Glue { .. } => {}
+            MathBox::Matrix { cells, col_widths, row_heights, total_width: _, total_height, env } => {
+                let mut cursor_y = y - total_height;
+                
+                // Draw open delimiter if needed
+                let delim_fs = match total_height {
+                    h if *h < 1.2 * self.font_size => self.font_size,
+                    h if *h < 1.8 * self.font_size => self.font_size * 1.2,
+                    h if *h < 2.4 * self.font_size => self.font_size * 1.8,
+                    _ => self.font_size * 2.4,
+                };
+                let delim_font = match total_height {
+                    h if *h < 1.2 * self.font_size => "KaTeX_Main",
+                    h if *h < 1.8 * self.font_size => "KaTeX_Size1",
+                    h if *h < 2.4 * self.font_size => "KaTeX_Size2",
+                    _ => "KaTeX_Size3",
+                };
+
+                let open_char = match env {
+                    swifttex_parser::ast::MatrixEnv::Plain => None,
+                    swifttex_parser::ast::MatrixEnv::Pmatrix => Some('('),
+                    swifttex_parser::ast::MatrixEnv::Bmatrix => Some('['),
+                    swifttex_parser::ast::MatrixEnv::Vmatrix => Some('|'),
+                    swifttex_parser::ast::MatrixEnv::Cases => Some('{'),
+                };
+                
+                let close_char = match env {
+                    swifttex_parser::ast::MatrixEnv::Plain => None,
+                    swifttex_parser::ast::MatrixEnv::Pmatrix => Some(')'),
+                    swifttex_parser::ast::MatrixEnv::Bmatrix => Some(']'),
+                    swifttex_parser::ast::MatrixEnv::Vmatrix => Some('|'),
+                    swifttex_parser::ast::MatrixEnv::Cases => None,
+                };
+
+                let mut content_x = x;
+                
+                if let Some(c) = open_char {
+                    let mut dy = y - total_height / 2.0 + self.font_size * 0.3;
+                    if c == '{' { dy -= self.font_size * 0.1; }
+                    buf.push_str(&format!(
+                        r#"<text x="{x:.3}" y="{y:.3}" font-family="{family}, serif" font-size="{fs:.3}px" font-style="normal" fill="currentColor">{c}</text>"#,
+                        x = x,
+                        y = dy,
+                        family = delim_font,
+                        fs = delim_fs,
+                        c = escape_char(c)
+                    ));
+                    content_x += self.font_size * 0.5;
+                }
+
+                let col_spacing = self.font_size * 0.5;
+                let row_spacing = self.font_size * 0.3;
+
+                for (r_idx, row) in cells.iter().enumerate() {
+                    cursor_y += row_heights[r_idx];
+                    let mut cursor_x = content_x;
+                    for (c_idx, cell) in row.iter().enumerate() {
+                        let cell_offset_x = cursor_x + (col_widths[c_idx] - cell.width()) / 2.0; // Center in col
+                        self.render_box(cell, cell_offset_x, cursor_y, buf);
+                        cursor_x += col_widths[c_idx] + col_spacing;
+                    }
+                    cursor_y += row_spacing;
+                }
+                
+                if let Some(c) = close_char {
+                    let close_x = content_x + col_widths.iter().sum::<f64>() + col_spacing * (col_widths.len().saturating_sub(1) as f64);
+                    let dy = y - total_height / 2.0 + self.font_size * 0.3;
+                    buf.push_str(&format!(
+                        r#"<text x="{x:.3}" y="{y:.3}" font-family="{family}, serif" font-size="{fs:.3}px" font-style="normal" fill="currentColor">{c}</text>"#,
+                        x = close_x,
+                        y = dy,
+                        family = delim_font,
+                        fs = delim_fs,
+                        c = escape_char(c)
+                    ));
+                }
+            }
+            MathBox::Delim { open, close, inner, delim_height, width: _, height: _, depth: _ } => {
+                let delim_fs = match delim_height {
+                    h if *h < 1.2 * self.font_size => self.font_size,
+                    h if *h < 1.8 * self.font_size => self.font_size * 1.2,
+                    h if *h < 2.4 * self.font_size => self.font_size * 1.8,
+                    _ => self.font_size * 2.4,
+                };
+                let delim_font = match delim_height {
+                    h if *h < 1.2 * self.font_size => "KaTeX_Main",
+                    h if *h < 1.8 * self.font_size => "KaTeX_Size1",
+                    h if *h < 2.4 * self.font_size => "KaTeX_Size2",
+                    _ => "KaTeX_Size3",
+                };
+
+                let open_char = match open {
+                    swifttex_parser::ast::DelimChar::Paren => Some('('),
+                    swifttex_parser::ast::DelimChar::Bracket => Some('['),
+                    swifttex_parser::ast::DelimChar::Brace => Some('{'),
+                    swifttex_parser::ast::DelimChar::Vert => Some('|'),
+                    swifttex_parser::ast::DelimChar::None => None,
+                };
+
+                let close_char = match close {
+                    swifttex_parser::ast::DelimChar::Paren => Some(')'),
+                    swifttex_parser::ast::DelimChar::Bracket => Some(']'),
+                    swifttex_parser::ast::DelimChar::Brace => Some('}'),
+                    swifttex_parser::ast::DelimChar::Vert => Some('|'),
+                    swifttex_parser::ast::DelimChar::None => None,
+                };
+
+                let mut cursor_x = x;
+                
+                if let Some(c) = open_char {
+                    let dy = y - delim_height / 2.0 + self.font_size * 0.3;
+                    buf.push_str(&format!(
+                        r#"<text x="{x:.3}" y="{y:.3}" font-family="{family}, serif" font-size="{fs:.3}px" font-style="normal" fill="currentColor">{c}</text>"#,
+                        x = cursor_x,
+                        y = dy,
+                        family = delim_font,
+                        fs = delim_fs,
+                        c = escape_char(c)
+                    ));
+                    cursor_x += self.font_size * 0.4;
+                }
+
+                self.render_box(inner, cursor_x, y, buf);
+                cursor_x += inner.width();
+
+                if let Some(c) = close_char {
+                    let dy = y - delim_height / 2.0 + self.font_size * 0.3;
+                    buf.push_str(&format!(
+                        r#"<text x="{x:.3}" y="{y:.3}" font-family="{family}, serif" font-size="{fs:.3}px" font-style="normal" fill="currentColor">{c}</text>"#,
+                        x = cursor_x,
+                        y = dy,
+                        family = delim_font,
+                        fs = delim_fs,
+                        c = escape_char(c)
+                    ));
+                }
+            }
+            MathBox::TextOp { text, .. } => {
+                let text_elem = format!(
+                    r#"<text x="{x:.3}" y="{y:.3}" font-family="KaTeX_Main, serif" font-size="{fs:.3}px" font-style="normal" fill="currentColor">{c}</text>"#,
+                    x = x, y = y, fs = self.font_size, c = escape_html(text)
+                );
+                buf.push_str(&text_elem);
+            }
+            MathBox::BigOp { op_box, lower, upper, width, height: _, depth: _ } => {
+                // In display mode, lower is below, upper is above
+                // In inline mode, they are shifted to the right (we use display mode as requested for below/above)
+                let op_x = x + (width - op_box.width()) / 2.0;
+                self.render_box(op_box, op_x, y, buf);
+                
+                if let Some(l) = lower {
+                    let l_x = x + (width - l.width()) / 2.0;
+                    let l_y = y + l.height() + self.font_size * 0.1;
+                    self.render_box(l, l_x, l_y, buf);
+                }
+                
+                if let Some(u) = upper {
+                    let u_x = x + (width - u.width()) / 2.0;
+                    let u_y = y - op_box.height() - u.depth() - self.font_size * 0.1;
+                    self.render_box(u, u_x, u_y, buf);
+                }
+            }
+
         }
     }
 }

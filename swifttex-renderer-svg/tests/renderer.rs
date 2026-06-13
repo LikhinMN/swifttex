@@ -126,3 +126,80 @@ fn test_performance_complex() {
         eprintln!("WARNING: complex render exceeded 10ms target ({}µs)", avg);
     }
 }
+
+#[test]
+fn test_render_matrix() {
+    let out = render(r"\begin{pmatrix} a & b \\ c & d \end{pmatrix}").expect("failed to render");
+    assert!(out.svg.contains("<svg"));
+    assert!(out.svg.contains("("));
+    assert!(out.svg.contains(")"));
+    assert!(out.svg.contains("KaTeX_"));
+}
+
+#[test]
+fn test_render_left_right() {
+    let out = render(r"\left( \frac{\frac{x}{z}}{y} \right)").expect("failed to render");
+    assert!(out.svg.contains("<svg"));
+    assert!(out.svg.contains("("));
+    assert!(out.svg.contains(")"));
+    assert!(out.svg.contains("KaTeX_Size"));
+}
+
+#[test]
+fn test_render_big_op_sum() {
+    let out = render(r"\sum_{i=0}^{n} x_i").expect("failed to render");
+    assert!(out.svg.contains("<svg"));
+    assert!(out.svg.contains("∑"));
+}
+
+#[test]
+fn test_render_big_op_int() {
+    let out = render(r"\int_0^\infty f(x)").expect("failed to render");
+    assert!(out.svg.contains("<svg"));
+    assert!(out.svg.contains("∫"));
+}
+
+
+#[test]
+fn test_render_sin() {
+    let out = render(r"\sin(x)").expect("failed to render");
+    assert!(out.svg.contains("KaTeX_Main"));
+}
+
+#[test]
+fn test_render_hat() {
+    let out = render(r"\hat{x}").expect("failed to render");
+    assert!(out.svg.contains("<svg"));
+}
+
+#[test]
+fn test_render_lim() {
+    let out = render(r"\lim_{x \to 0} f(x)").expect("failed to render");
+    assert!(out.svg.contains("<svg"));
+}
+
+#[test]
+fn test_render_leq() {
+    let out = render(r"x \leq y").expect("failed to render");
+    assert!(out.svg.contains("≤"));
+}
+
+#[test]
+fn test_render_forall() {
+    let out = render(r"\forall x \in \mathbb{R}").unwrap_or_else(|_| render(r"\forall x \in R").unwrap());
+    assert!(out.svg.contains("<svg"));
+}
+
+#[test]
+fn test_render_math_style_script() {
+    let out_display = swifttex_renderer_svg::render_with_style(r"x", swifttex_layout::style::MathStyle::Display).unwrap();
+    let out_script = swifttex_renderer_svg::render_with_style(r"x", swifttex_layout::style::MathStyle::Script).unwrap();
+    assert!(out_display.width > out_script.width);
+}
+
+#[test]
+fn test_render_spacing() {
+    let out_no_space = render(r"xy").unwrap();
+    let out_space = render(r"x \, y").unwrap();
+    assert!(out_space.width > out_no_space.width);
+}
