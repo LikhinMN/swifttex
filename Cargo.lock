@@ -586,7 +586,7 @@ dependencies = [
 
 [[package]]
 name = "swifttex-wasm"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "getrandom",
  "serde",
