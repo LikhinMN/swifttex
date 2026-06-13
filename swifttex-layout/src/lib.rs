@@ -1,1 +1,11 @@
-// Placeholder for layout
+pub mod boxes;
+pub mod layout;
+pub mod metrics;
+
+pub use boxes::MathBox;
+pub use layout::LayoutEngine;
+
+pub fn layout_nodes(nodes: &[swifttex_parser::ast::Node]) -> MathBox {
+    let engine = LayoutEngine::new(16.0, true);
+    engine.layout_nodes(nodes)
+}

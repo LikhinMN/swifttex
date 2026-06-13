@@ -4,3 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+swifttex-parser = { path = "../swifttex-parser" }
+swifttex-lexer = { path = "../swifttex-lexer" }
