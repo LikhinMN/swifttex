@@ -203,3 +203,21 @@ fn test_render_spacing() {
     let out_space = render(r"x \, y").unwrap();
     assert!(out_space.width > out_no_space.width);
 }
+
+#[test]
+fn test_aria_label_superscript() {
+    let out = swifttex_renderer_svg::render_accessible("x^2").unwrap();
+    assert!(out.aria_label.contains("to the power of"));
+}
+
+#[test]
+fn test_aria_label_fraction() {
+    let out = swifttex_renderer_svg::render_accessible(r"\frac{1}{2}").unwrap();
+    assert!(out.aria_label.contains("fraction"));
+}
+
+#[test]
+fn test_aria_label_sqrt() {
+    let out = swifttex_renderer_svg::render_accessible(r"\sqrt{x}").unwrap();
+    assert!(out.aria_label.contains("square root"));
+}

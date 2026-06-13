@@ -30,12 +30,15 @@ impl SvgRenderer {
     pub fn render(&self, input: &str) -> Result<RenderOutput, String> {
         let mut parser = Parser::new(input);
         let nodes = parser.parse();
-        
+        self.render_from_nodes(input, &nodes)
+    }
+
+    pub fn render_from_nodes(&self, input: &str, nodes: &[swifttex_parser::ast::Node]) -> Result<RenderOutput, String> {
         let mut engine = LayoutEngine::new(self.font_size, self.display_mode);
         if let Some(s) = self.math_style {
             engine = engine.with_style(s);
         }
-        let root_box = engine.layout_nodes(&nodes);
+        let root_box = engine.layout_nodes(nodes);
         
         let mut buf = String::new();
         let total_width = root_box.width();
@@ -47,6 +50,7 @@ impl SvgRenderer {
         self.render_box(&root_box, start_x, start_y, &mut buf);
         
         let escaped_input = escape_html(input);
+        let aria_label_text = escape_html(&generate_aria_label(nodes));
         
         let defs = if self.inline_fonts {
             "<defs>\n    <style>\n      @import url('https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css');\n    </style>\n  </defs>\n  "
@@ -61,7 +65,7 @@ impl SvgRenderer {
 </svg>"#,
             w = f64::max(total_width, 0.1),
             h = f64::max(total_height, 0.1),
-            aria = escaped_input,
+            aria = aria_label_text,
             title = escaped_input,
             defs = defs,
             inner = buf
@@ -311,6 +315,83 @@ fn escape_html(s: &str) -> String {
         }
     }
     out
+}
+
+
+pub fn generate_aria_label(nodes: &[swifttex_parser::ast::Node]) -> String {
+    let mut label = String::new();
+    for node in nodes {
+        match node {
+            swifttex_parser::ast::Node::Text(ch) | swifttex_parser::ast::Node::Symbol(ch) => {
+                label.push(*ch);
+                label.push(' ');
+            }
+            swifttex_parser::ast::Node::Fraction { numer, denom } => {
+                label.push_str(&format!("fraction with numerator {} over {} ", generate_aria_label(&[numer.as_ref().clone()]), generate_aria_label(&[denom.as_ref().clone()])));
+            }
+            swifttex_parser::ast::Node::Superscript { base, exp } => {
+                label.push_str(&format!("{} to the power of {} ", generate_aria_label(&[base.as_ref().clone()]), generate_aria_label(&[exp.as_ref().clone()])));
+            }
+            swifttex_parser::ast::Node::Subscript { base, sub } => {
+                label.push_str(&format!("{} subscript {} ", generate_aria_label(&[base.as_ref().clone()]), generate_aria_label(&[sub.as_ref().clone()])));
+            }
+            swifttex_parser::ast::Node::SquareRoot { inner } => {
+                label.push_str(&format!("square root of {} ", generate_aria_label(&[inner.as_ref().clone()])));
+            }
+            swifttex_parser::ast::Node::Group(children) => {
+                label.push_str(&generate_aria_label(children));
+            }
+            swifttex_parser::ast::Node::BigOp { op, lower, upper } => {
+                match op {
+                    swifttex_parser::ast::BigOpKind::Sum => label.push_str("sum "),
+                    swifttex_parser::ast::BigOpKind::Integral => label.push_str("integral "),
+                    swifttex_parser::ast::BigOpKind::Product => label.push_str("product "),
+                    swifttex_parser::ast::BigOpKind::Union => label.push_str("union "),
+                    swifttex_parser::ast::BigOpKind::Intersect => label.push_str("intersection "),
+                }
+                if let Some(l) = lower {
+                    label.push_str(&format!("from {} ", generate_aria_label(&[l.as_ref().clone()])));
+                }
+                if let Some(u) = upper {
+                    label.push_str(&format!("to {} ", generate_aria_label(&[u.as_ref().clone()])));
+                }
+            }
+            swifttex_parser::ast::Node::TextOp(name) => {
+                label.push_str(name);
+                label.push(' ');
+            }
+            swifttex_parser::ast::Node::Unknown(_) => {
+                label.push_str("unknown command ");
+            }
+            swifttex_parser::ast::Node::Operator(s) => {
+                label.push_str(s);
+                label.push(' ');
+            }
+            swifttex_parser::ast::Node::Spacing(_) => {
+                label.push(' ');
+            }
+            swifttex_parser::ast::Node::Accent { inner, .. } => {
+                label.push_str(&generate_aria_label(&[inner.as_ref().clone()]));
+            }
+            swifttex_parser::ast::Node::Delimiter { inner, .. } => {
+                label.push_str(&generate_aria_label(&[inner.as_ref().clone()]));
+            }
+            swifttex_parser::ast::Node::Matrix { rows, .. } => {
+                label.push_str("matrix ");
+                for row in rows {
+                    for cell in row {
+                        label.push_str(&generate_aria_label(std::slice::from_ref(cell)));
+                    }
+                }
+            }
+        }
+    }
+    label = label.replace("  ", " ").trim().to_string();
+    if label.len() > 200 {
+        label.truncate(197);
+        label.push_str("...");
+    }
+    label
 }
 
 fn escape_char(c: char) -> String {
