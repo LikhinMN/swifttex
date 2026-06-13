@@ -1,0 +1,14 @@
+{
+  "name": "swifttex",
+  "version": "0.1.0",
+  "description": "Fast LaTeX math rendering engine — Rust/WASM",
+  "main": "pkg/swifttex.js",
+  "types": "pkg/swifttex.d.ts",
+  "files": ["pkg/"],
+  "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LikhinMN/swifttex"
+  },
+  "keywords": ["latex", "math", "wasm", "katex", "mathjax", "rendering"]
+}

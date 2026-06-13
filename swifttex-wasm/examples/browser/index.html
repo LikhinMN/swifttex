@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwiftTeX Browser Example</title>
+    <style>
+        body {
+            background-color: #0f0f0f;
+            color: #ffffff;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            margin: 0;
+        }
+        .container {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 16px;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+        #output {
+            padding: 20px;
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            min-height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .status {
+            font-size: 12px;
+            color: #888;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SwiftTeX</h1>
+        <textarea id="input">\frac{x^2 + 1}{\sqrt{y}}</textarea>
+        <div id="output">Loading WASM...</div>
+        <div class="status" id="status"></div>
+    </div>
+
+    <script type="module">
+        import init, { render } from '../../pkg/swifttex.js';
+
+        async function main() {
+            await init();
+            
+            const inputEl = document.getElementById('input');
+            const outputEl = document.getElementById('output');
+            const statusEl = document.getElementById('status');
+
+            function update() {
+                const text = inputEl.value;
+                const start = performance.now();
+                
+                try {
+                    const result = render(text, { display_mode: true, font_size: 24.0 });
+                    if (result.error) {
+                        outputEl.innerHTML = `<span style="color: #ff5555;">${result.error}</span>`;
+                    } else if (result.svg) {
+                        outputEl.innerHTML = result.svg;
+                    } else {
+                        outputEl.innerHTML = "";
+                    }
+                } catch (e) {
+                    outputEl.innerHTML = `<span style="color: #ff5555;">Crash: ${e}</span>`;
+                }
+
+                const end = performance.now();
+                statusEl.innerText = `Rendered in ${(end - start).toFixed(2)} ms`;
+            }
+
+            inputEl.addEventListener('input', update);
+            update();
+        }
+
+        main().catch(e => {
+            document.getElementById('output').innerHTML = "Failed to load WASM module.";
+            console.error(e);
+        });
+    </script>
+</body>
+</html>
