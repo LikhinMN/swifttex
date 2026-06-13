@@ -4,7 +4,8 @@
   "description": "Fast LaTeX math rendering engine — Rust/WASM",
   "main": "pkg/swifttex.js",
   "types": "pkg/swifttex.d.ts",
-  "files": ["pkg/"],
+  "style": "style.css",
+  "files": ["pkg/", "style.css"],
   "license": "MIT OR Apache-2.0",
   "repository": {
     "type": "git",

@@ -51,12 +51,14 @@
             text-align: right;
         }
     </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <link rel="stylesheet" href="../../style.css">
 </head>
 <body>
     <div class="container">
         <h1>SwiftTeX</h1>
         <textarea id="input">\frac{x^2 + 1}{\sqrt{y}}</textarea>
-        <div id="output">Loading WASM...</div>
+        <div id="output" class="swifttex swifttex-display">Loading WASM...</div>
         <div class="status" id="status"></div>
     </div>
 
@@ -88,7 +90,7 @@
                 }
 
                 const end = performance.now();
-                statusEl.innerText = `Rendered in ${(end - start).toFixed(2)} ms`;
+                statusEl.innerText = `Rendered length ${text.length} in ${(end - start).toFixed(2)} ms`;
             }
 
             inputEl.addEventListener('input', update);

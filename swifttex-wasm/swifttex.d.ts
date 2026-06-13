@@ -1,6 +1,7 @@
 export interface RenderOptions {
   font_size?: number;
   display_mode?: boolean;
+  inline_fonts?: boolean;
 }
 
 export interface RenderResult {

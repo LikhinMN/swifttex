@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-export function SwiftTeX({ tex, displayMode = false, fontSize = 16 }) {
+export function SwiftTeX({ tex, displayMode = false, fontSize = 16, className = "" }) {
   const [result, setResult] = useState(null);
   const wasmRef = useRef(null);
 
@@ -12,11 +12,14 @@ export function SwiftTeX({ tex, displayMode = false, fontSize = 16 }) {
     });
   }, [tex, displayMode, fontSize]);
 
-  if (!result) return null;
-  if (result.error) return <span style={{ color: "red" }}>{result.error}</span>;
+  const baseClass = displayMode ? "swifttex-display" : "swifttex";
+  const finalClass = className ? `${baseClass} ${className}` : baseClass;
+
+  if (!result) return <span className={finalClass} style={{ width: 0, overflow: "hidden" }}>&#8203;</span>;
+  if (result.error) return <span className={finalClass} style={{ color: "red" }}>{result.error}</span>;
   return (
     <span
-      style={{ display: displayMode ? "block" : "inline-block" }}
+      className={finalClass}
       dangerouslySetInnerHTML={{ __html: result.svg }}
     />
   );

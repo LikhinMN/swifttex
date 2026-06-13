@@ -7,8 +7,11 @@ pub struct RenderOptions {
     pub font_size: f64,
     #[serde(default)]
     pub display_mode: bool,
+    #[serde(default = "default_true")]
+    pub inline_fonts: bool,
 }
 fn default_font_size() -> f64 { 16.0 }
+fn default_true() -> bool { true }
 
 #[derive(Serialize)]
 pub struct RenderResult {
@@ -25,9 +28,9 @@ pub struct RenderError {
 #[wasm_bindgen]
 pub fn render(input: &str, opts: JsValue) -> JsValue {
     let options: RenderOptions = serde_wasm_bindgen::from_value(opts)
-        .unwrap_or(RenderOptions { font_size: 16.0, display_mode: false });
+        .unwrap_or(RenderOptions { font_size: 16.0, display_mode: false, inline_fonts: true });
 
-    let renderer = swifttex_renderer_svg::SvgRenderer::new(options.font_size, options.display_mode);
+    let renderer = swifttex_renderer_svg::SvgRenderer::new(options.font_size, options.display_mode, options.inline_fonts);
 
     match renderer.render(input) {
         Ok(out) => serde_wasm_bindgen::to_value(&RenderResult {
