@@ -57,8 +57,14 @@
 <body>
     <div class="container">
         <h1>SwiftTeX</h1>
+        <div class="controls" style="display: flex; gap: 10px;">
+            <label><input type="radio" name="output" value="svg" checked> SVG</label>
+            <label><input type="radio" name="output" value="mathml"> MathML</label>
+            <label><input type="radio" name="output" value="both"> Both</label>
+        </div>
         <textarea id="input">\frac{x^2 + 1}{\sqrt{y}}</textarea>
         <div id="output" class="swifttex swifttex-display">Loading WASM...</div>
+        <div id="aria-label-display" style="font-size: 12px; color: #888; text-align: center;"></div>
         <div class="status" id="status"></div>
     </div>
 
@@ -71,22 +77,38 @@
             const inputEl = document.getElementById('input');
             const outputEl = document.getElementById('output');
             const statusEl = document.getElementById('status');
+            const ariaLabelEl = document.getElementById('aria-label-display');
+            const outputRadios = document.querySelectorAll('input[name="output"]');
 
             function update() {
                 const text = inputEl.value;
+                const outputFormat = document.querySelector('input[name="output"]:checked').value;
                 const start = performance.now();
                 
                 try {
-                    const result = render(text, { display_mode: true, font_size: 24.0 });
+                    const result = render(text, { display_mode: true, font_size: 24.0, output: outputFormat });
                     if (result.error) {
                         outputEl.innerHTML = `<span style="color: #ff5555;">${result.error}</span>`;
-                    } else if (result.svg) {
+                        ariaLabelEl.innerText = "";
+                    } else if (outputFormat === 'svg' && result.svg) {
                         outputEl.innerHTML = result.svg;
+                        const svgEl = outputEl.querySelector('svg');
+                        ariaLabelEl.innerText = svgEl ? svgEl.getAttribute('aria-label') : "";
+                    } else if (outputFormat === 'mathml' && result.mathml) {
+                        outputEl.innerHTML = result.mathml;
+                        const mathEl = outputEl.querySelector('math');
+                        ariaLabelEl.innerText = mathEl ? mathEl.getAttribute('aria-label') : "";
+                    } else if (outputFormat === 'both' && result.svg && result.mathml) {
+                        outputEl.innerHTML = `<div style="display:flex; width:100%; gap:20px;"><div style="flex:1;">${result.svg}</div><div style="flex:1;"><pre style="font-size:12px; overflow-x:auto;">${result.mathml.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre></div></div>`;
+                        const svgEl = outputEl.querySelector('svg');
+                        ariaLabelEl.innerText = svgEl ? svgEl.getAttribute('aria-label') : "";
                     } else {
                         outputEl.innerHTML = "";
+                        ariaLabelEl.innerText = "";
                     }
                 } catch (e) {
                     outputEl.innerHTML = `<span style="color: #ff5555;">Crash: ${e}</span>`;
+                    ariaLabelEl.innerText = "";
                 }
 
                 const end = performance.now();
@@ -94,6 +116,7 @@
             }
 
             inputEl.addEventListener('input', update);
+            outputRadios.forEach(r => r.addEventListener('change', update));
             update();
         }
 
