@@ -1,0 +1,10 @@
+[package]
+name = "swifttex-plugin-api"
+version = "0.3.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+
+[dev-dependencies]
+swifttex-parser = { path = "../swifttex-parser" }

@@ -7,3 +7,4 @@ repository = "https://github.com/LikhinMN/swifttex"
 
 [dependencies]
 swifttex-lexer = { path = "../swifttex-lexer" }
+swifttex-plugin-api = { path = "../swifttex-plugin-api" }

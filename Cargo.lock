@@ -553,6 +553,14 @@ name = "swifttex-parser"
 version = "0.3.0"
 dependencies = [
  "swifttex-lexer",
+ "swifttex-plugin-api",
+]
+
+[[package]]
+name = "swifttex-plugin-api"
+version = "0.3.0"
+dependencies = [
+ "swifttex-parser",
 ]
 
 [[package]]
@@ -561,6 +569,7 @@ version = "0.3.0"
 dependencies = [
  "swifttex-lexer",
  "swifttex-parser",
+ "swifttex-plugin-api",
 ]
 
 [[package]]
@@ -571,6 +580,7 @@ dependencies = [
  "swifttex-layout",
  "swifttex-lexer",
  "swifttex-parser",
+ "swifttex-plugin-api",
  "swifttex-renderer-mathml",
 ]
 
@@ -582,6 +592,7 @@ dependencies = [
  "serde",
  "serde-wasm-bindgen",
  "swifttex-layout",
+ "swifttex-plugin-api",
  "swifttex-renderer-mathml",
  "swifttex-renderer-svg",
  "wasm-bindgen",
