@@ -1,4 +1,5 @@
 pub mod boxes;
+pub mod katex_metrics;
 pub mod layout;
 pub mod metrics;
 

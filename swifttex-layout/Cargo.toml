@@ -8,3 +8,4 @@ repository = "https://github.com/LikhinMN/swifttex"
 [dependencies]
 swifttex-parser = { path = "../swifttex-parser" }
 swifttex-lexer = { path = "../swifttex-lexer" }
+phf = { version = "0.11", features = ["macros"] }

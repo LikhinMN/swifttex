@@ -130,3 +130,16 @@ fn test_empty_node_list() {
     assert!(layout.height() < 1e-6);
     assert!(layout.depth() < 1e-6);
 }
+
+#[test]
+fn test_katex_metrics_differ_from_old() {
+    let m = swifttex_layout::metrics::glyph_metrics('x');
+    assert!((m.width - 0.55).abs() > 0.001);
+}
+
+#[test]
+fn test_katex_font_styles_differ() {
+    let m_math = swifttex_layout::metrics::glyph_metrics('x');
+    let m_main = swifttex_layout::metrics::glyph_metrics('1');
+    assert!((m_math.width - m_main.width).abs() > 0.001);
+}
