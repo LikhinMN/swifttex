@@ -537,7 +537,7 @@ checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
 
 [[package]]
 name = "swifttex-layout"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "phf",
  "swifttex-lexer",
@@ -546,18 +546,18 @@ dependencies = [
 
 [[package]]
 name = "swifttex-lexer"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "swifttex-parser"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "swifttex-lexer",
 ]
 
 [[package]]
 name = "swifttex-renderer-svg"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "criterion",
  "swifttex-layout",
@@ -567,7 +567,7 @@ dependencies = [
 
 [[package]]
 name = "swifttex-wasm"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "getrandom",
  "serde",
