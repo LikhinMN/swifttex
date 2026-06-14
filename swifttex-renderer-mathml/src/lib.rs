@@ -106,6 +106,17 @@ impl MathMLRenderer {
             Node::Unknown(s) => {
                 format!("<!-- unknown: {} -->", escape_html(s))
             }
+            Node::Style { style, inner } => {
+                let variant = match style {
+                    TextStyle::Text => "normal",
+                    TextStyle::Bold => "bold",
+                    TextStyle::Calligraphic => "script",
+                    TextStyle::Blackboard => "double-struck",
+                    TextStyle::Roman => "normal",
+                    TextStyle::Italic => "italic",
+                };
+                format!("<mstyle mathvariant=\"{}\"><mrow>{}</mrow></mstyle>", variant, self.render_node(inner))
+            }
             Node::Accent { kind, inner } => {
                 let accent_char = match kind {
                     AccentKind::Hat => '^',
