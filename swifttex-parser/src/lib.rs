@@ -146,8 +146,30 @@ impl<'a> Parser<'a> {
                         denom: Box::new(denom),
                     })
                 } else if cmd == "sqrt" {
+                    let mut index = None;
+                    self.skip_whitespace();
+                    if self.current_token == Token::Letter('[') {
+                        self.advance();
+                        let mut index_nodes = Vec::new();
+                        loop {
+                            self.skip_whitespace();
+                            if self.current_token == Token::EOF || self.current_token == Token::Letter(']') {
+                                break;
+                            }
+                            if let Some(atom) = self.parse_atom() {
+                                let node = self.parse_postfix(atom);
+                                index_nodes.push(node);
+                            } else {
+                                self.advance();
+                            }
+                        }
+                        if self.current_token == Token::Letter(']') {
+                            self.advance();
+                        }
+                        index = Some(Box::new(Node::Group(index_nodes)));
+                    }
                     let inner = self.parse_group_or_atom().unwrap_or_else(|| Node::Group(vec![]));
-                    Some(Node::SquareRoot { inner: Box::new(inner) })
+                    Some(Node::SquareRoot { index, inner: Box::new(inner) })
                 } else if cmd == "mathbf" {
                     let inner = self.parse_group_or_atom().unwrap_or(Node::Group(vec![]));
                     Some(Node::Style { style: ast::TextStyle::Bold, inner: Box::new(inner) })

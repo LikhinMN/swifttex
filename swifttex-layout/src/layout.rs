@@ -189,10 +189,22 @@ impl LayoutEngine {
                     depth: d,
                 }
             }
-            Node::SquareRoot { inner } => {
+            Node::SquareRoot { index, inner } => {
                 let inner_engine = self.with_style(self.style.cramped());
                 let inner_box = inner_engine.layout_node_with_size(inner, inner_engine.font_size);
                 let radical_w = 0.4 * current_font_size;
+                
+                let mut index_box = None;
+                if let Some(idx) = index {
+                    let idx_engine = self.with_style(crate::style::MathStyle::ScriptScript);
+                    index_box = Some(idx_engine.layout_node_with_size(idx, idx_engine.font_size));
+                }
+
+                let mut index_shift_x = 0.0;
+                if let Some(ref ib) = index_box {
+                    index_shift_x = ib.width() + 0.1 * current_font_size;
+                }
+
                 let radical = MathBox::RuleBox {
                     width: radical_w,
                     height: inner_box.height() + inner_box.depth(),
@@ -218,11 +230,28 @@ impl LayoutEngine {
                     depth: inner_box.depth(),
                 };
 
-                let w = radical.width() + inner_vbox.width();
+                let w = index_shift_x + radical.width() + inner_vbox.width();
                 let h = inner_vbox.height();
                 let d = inner_vbox.depth();
+                
+                let mut children = Vec::new();
+                if let Some(ib) = index_box {
+                    let shift_y = h * 0.5;
+                    children.push(MathBox::ShiftedBox {
+                        width: ib.width(),
+                        height: ib.height() + shift_y,
+                        depth: (ib.depth() - shift_y).max(0.0),
+                        shift_x: 0.0,
+                        shift_y,
+                        inner: Box::new(ib),
+                    });
+                    children.push(MathBox::Glue { width: 0.1 * current_font_size });
+                }
+                children.push(radical);
+                children.push(inner_vbox);
+
                 MathBox::HBox {
-                    children: vec![radical, inner_vbox],
+                    children,
                     width: w,
                     height: h,
                     depth: d,

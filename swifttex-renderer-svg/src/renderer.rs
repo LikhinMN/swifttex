@@ -384,8 +384,12 @@ pub fn generate_aria_label(nodes: &[swifttex_parser::ast::Node]) -> String {
             swifttex_parser::ast::Node::Subscript { base, sub } => {
                 label.push_str(&format!("{} subscript {} ", generate_aria_label(&[base.as_ref().clone()]), generate_aria_label(&[sub.as_ref().clone()])));
             }
-            swifttex_parser::ast::Node::SquareRoot { inner } => {
-                label.push_str(&format!("square root of {} ", generate_aria_label(&[inner.as_ref().clone()])));
+            swifttex_parser::ast::Node::SquareRoot { index, inner } => {
+                if let Some(idx) = index {
+                    label.push_str(&format!("{} root of {} ", generate_aria_label(&[idx.as_ref().clone()]), generate_aria_label(&[inner.as_ref().clone()])));
+                } else {
+                    label.push_str(&format!("square root of {} ", generate_aria_label(&[inner.as_ref().clone()])));
+                }
             }
             swifttex_parser::ast::Node::Group(children) => {
                 label.push_str(&generate_aria_label(children));

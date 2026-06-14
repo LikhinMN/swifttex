@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { RenderOptions } from '../swifttex.d.ts';
+import type { RenderOptions } from '../swifttex.d.ts';
 
 export interface SwiftTeXProps extends RenderOptions {
     /** The LaTeX math string to render */

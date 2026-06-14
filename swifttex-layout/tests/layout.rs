@@ -70,7 +70,7 @@ fn test_sqrt() {
                 MathBox::HBox { children: inner_children, height, .. } => {
                     assert_eq!(inner_children.len(), 2);
                     let inner_node = match &nodes[0] {
-                        swifttex_parser::ast::Node::SquareRoot { inner } => *(inner.clone()),
+                        swifttex_parser::ast::Node::SquareRoot { index: _, inner } => *(inner.clone()),
                         _ => panic!("Expected SquareRoot"),
                     };
                     let inner_layout = LayoutEngine::new(16.0, true).layout_nodes(&[inner_node]);

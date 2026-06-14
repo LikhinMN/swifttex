@@ -91,8 +91,12 @@ impl MathMLRenderer {
             Node::Subscript { base, sub } => {
                 format!("<msub>{}<mrow>{}</mrow></msub>", self.render_node(base), self.render_node(sub))
             }
-            Node::SquareRoot { inner } => {
-                format!("<msqrt><mrow>{}</mrow></msqrt>", self.render_node(inner))
+            Node::SquareRoot { index, inner } => {
+                if let Some(idx) = index {
+                    format!("<mroot><mrow>{}</mrow><mrow>{}</mrow></mroot>", self.render_node(inner), self.render_node(idx))
+                } else {
+                    format!("<msqrt><mrow>{}</mrow></msqrt>", self.render_node(inner))
+                }
             }
             Node::Operator(s) => {
                 format!("<mo>{}</mo>", escape_html(s))

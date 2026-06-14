@@ -36,6 +36,7 @@ fn test_sqrt() {
     assert_eq!(
         nodes,
         vec![Node::SquareRoot {
+            index: None,
             inner: Box::new(Node::Group(vec![Node::Text('x')])),
         }]
     );
