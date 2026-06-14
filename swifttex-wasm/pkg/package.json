@@ -1,0 +1,28 @@
+{
+  "name": "swifttex-wasm",
+  "type": "module",
+  "description": "WASM bindings for the SwiftTeX math renderer.",
+  "version": "0.3.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LikhinMN/swifttex"
+  },
+  "files": [
+    "swifttex_wasm_bg.wasm",
+    "swifttex_wasm.js",
+    "swifttex_wasm.d.ts"
+  ],
+  "main": "swifttex_wasm.js",
+  "types": "swifttex_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ],
+  "keywords": [
+    "latex",
+    "math",
+    "wasm",
+    "katex",
+    "svg"
+  ]
+}
