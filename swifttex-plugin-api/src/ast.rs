@@ -30,6 +30,20 @@ pub enum Node {
     },
     TextOp(String),
     Spacing(f64),
+    Style {
+        style: TextStyle,
+        inner: Box<Node>,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum TextStyle {
+    Text,
+    Bold,
+    Calligraphic,
+    Blackboard,
+    Roman,
+    Italic,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
