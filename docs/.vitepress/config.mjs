@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
+  base: '/swifttex/',
   title: "SwiftTeX",
   description: "Fast, accurate LaTeX math rendering engine.",
   themeConfig: {
