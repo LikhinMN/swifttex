@@ -56,7 +56,7 @@ impl SvgRenderer {
         let start_x = 0.0;
         let start_y = root_box.height();
         
-        self.render_box(&root_box, start_x, start_y, &mut buf);
+        self.render_box(&root_box, start_x, start_y, &mut buf, None);
         
         let escaped_input = escape_html(input);
         let aria_label_text = escape_html(&generate_aria_label(nodes));
@@ -87,7 +87,7 @@ impl SvgRenderer {
         })
     }
 
-    fn render_box(&self, mb: &MathBox, x: f64, y: f64, buf: &mut String) {
+    fn render_box(&self, mb: &MathBox, x: f64, y: f64, buf: &mut String, current_text_style: Option<&swifttex_parser::ast::TextStyle>) {
         match mb {
             MathBox::Glyph { ch, width, height: _, depth: _ } => {
                 let m = glyph_metrics(*ch);
@@ -97,29 +97,66 @@ impl SvgRenderer {
                     self.font_size
                 };
                 
-                let (font_family, font_style) = if ch.is_ascii_alphabetic() {
-                    ("KaTeX_Math", "italic")
+                let mut font_family = if ch.is_ascii_alphabetic() {
+                    "KaTeX_Math"
                 } else if ('α'..='ω').contains(ch) || ('Α'..='Ω').contains(ch) {
-                    ("KaTeX_Math", "normal")
+                    "KaTeX_Math"
                 } else {
-                    ("KaTeX_Main", "normal")
+                    "KaTeX_Main"
                 };
+                let mut font_style = if font_family == "KaTeX_Math" && ch.is_ascii_alphabetic() {
+                    "italic"
+                } else {
+                    "normal"
+                };
+                let mut font_weight = "normal";
+
+                if let Some(ts) = current_text_style {
+                    match ts {
+                        swifttex_parser::ast::TextStyle::Text => {
+                            font_family = "KaTeX_Main";
+                            font_style = "normal";
+                        }
+                        swifttex_parser::ast::TextStyle::Bold => {
+                            font_family = "KaTeX_Main";
+                            font_style = "normal";
+                            font_weight = "bold";
+                        }
+                        swifttex_parser::ast::TextStyle::Calligraphic => {
+                            font_family = "KaTeX_Caligraphic";
+                            font_style = "normal";
+                        }
+                        swifttex_parser::ast::TextStyle::Blackboard => {
+                            font_family = "KaTeX_AMS";
+                            font_style = "normal";
+                        }
+                        swifttex_parser::ast::TextStyle::Roman => {
+                            font_family = "KaTeX_Main";
+                            font_style = "normal";
+                        }
+                        swifttex_parser::ast::TextStyle::Italic => {
+                            font_family = "KaTeX_Main";
+                            font_style = "italic";
+                        }
+                    }
+                }
                 
                 let GlyphRender::Text(c) = glyph_path_or_text(*ch);
                 buf.push_str(&format!(
-                    r#"<text x="{x:.3}" y="{y:.3}" font-family="{family}, serif" font-size="{fs:.3}px" font-style="{style}" fill="currentColor">{c}</text>"#,
+                    r#"<text x="{x:.3}" y="{y:.3}" font-family="{family}, serif" font-size="{fs:.3}px" font-style="{style}" font-weight="{weight}" fill="currentColor">{c}</text>"#,
                     x = x,
                     y = y,
                     family = font_family,
                     fs = local_font_size,
                     style = font_style,
+                    weight = font_weight,
                     c = escape_char(c)
                 ));
             }
             MathBox::HBox { children, .. } => {
                 let mut cursor_x = x;
                 for child in children {
-                    self.render_box(child, cursor_x, y, buf);
+                    self.render_box(child, cursor_x, y, buf, current_text_style);
                     cursor_x += child.width();
                 }
             }
@@ -127,7 +164,7 @@ impl SvgRenderer {
                 let mut cursor_y = y - height;
                 for child in children {
                     cursor_y += child.height();
-                    self.render_box(child, x, cursor_y, buf);
+                    self.render_box(child, x, cursor_y, buf, current_text_style);
                     cursor_y += child.depth();
                 }
             }
@@ -142,7 +179,7 @@ impl SvgRenderer {
                 ));
             }
             MathBox::ShiftedBox { inner, shift_x, shift_y, .. } => {
-                self.render_box(inner, x + shift_x, y - shift_y, buf);
+                self.render_box(inner, x + shift_x, y - shift_y, buf, current_text_style);
             }
             MathBox::Glue { .. } => {}
             MathBox::Matrix { cells, col_widths, row_heights, total_width: _, total_height, env } => {
@@ -202,7 +239,7 @@ impl SvgRenderer {
                     let mut cursor_x = content_x;
                     for (c_idx, cell) in row.iter().enumerate() {
                         let cell_offset_x = cursor_x + (col_widths[c_idx] - cell.width()) / 2.0; // Center in col
-                        self.render_box(cell, cell_offset_x, cursor_y, buf);
+                        self.render_box(cell, cell_offset_x, cursor_y, buf, current_text_style);
                         cursor_x += col_widths[c_idx] + col_spacing;
                     }
                     cursor_y += row_spacing;
@@ -266,7 +303,7 @@ impl SvgRenderer {
                     cursor_x += self.font_size * 0.4;
                 }
 
-                self.render_box(inner, cursor_x, y, buf);
+                self.render_box(inner, cursor_x, y, buf, current_text_style);
                 cursor_x += inner.width();
 
                 if let Some(c) = close_char {
@@ -292,19 +329,22 @@ impl SvgRenderer {
                 // In display mode, lower is below, upper is above
                 // In inline mode, they are shifted to the right (we use display mode as requested for below/above)
                 let op_x = x + (width - op_box.width()) / 2.0;
-                self.render_box(op_box, op_x, y, buf);
+                self.render_box(op_box, op_x, y, buf, current_text_style);
                 
                 if let Some(l) = lower {
                     let l_x = x + (width - l.width()) / 2.0;
                     let l_y = y + l.height() + self.font_size * 0.1;
-                    self.render_box(l, l_x, l_y, buf);
+                    self.render_box(l, l_x, l_y, buf, current_text_style);
                 }
                 
                 if let Some(u) = upper {
                     let u_x = x + (width - u.width()) / 2.0;
                     let u_y = y - op_box.height() - u.depth() - self.font_size * 0.1;
-                    self.render_box(u, u_x, u_y, buf);
+                    self.render_box(u, u_x, u_y, buf, current_text_style);
                 }
+            }
+            MathBox::Style { style, inner, width: _, height: _, depth: _ } => {
+                self.render_box(inner, x, y, buf, Some(style));
             }
 
         }
@@ -392,6 +432,9 @@ pub fn generate_aria_label(nodes: &[swifttex_parser::ast::Node]) -> String {
                         label.push_str(&generate_aria_label(std::slice::from_ref(cell)));
                     }
                 }
+            }
+            swifttex_parser::ast::Node::Style { inner, .. } => {
+                label.push_str(&generate_aria_label(&[inner.as_ref().clone()]));
             }
         }
     }
