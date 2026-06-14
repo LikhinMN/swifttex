@@ -429,6 +429,16 @@ impl LayoutEngine {
             Node::Unknown(_) => {
                 MathBox::Glue { width: 0.0 }
             }
+            Node::Style { style, inner } => {
+                let inner_box = self.layout_node_with_size(inner, current_font_size);
+                MathBox::Style {
+                    style: style.clone(),
+                    width: inner_box.width(),
+                    height: inner_box.height(),
+                    depth: inner_box.depth(),
+                    inner: Box::new(inner_box),
+                }
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-use swifttex_parser::ast::{MatrixEnv, DelimChar};
+use swifttex_parser::ast::{MatrixEnv, DelimChar, TextStyle};
 
 #[derive(Debug, Clone)]
 pub enum MathBox {
@@ -67,6 +67,13 @@ pub enum MathBox {
         height: f64,
         depth: f64,
     },
+    Style {
+        style: TextStyle,
+        inner: Box<MathBox>,
+        width: f64,
+        height: f64,
+        depth: f64,
+    },
 }
 
 impl MathBox {
@@ -82,6 +89,7 @@ impl MathBox {
             Self::Delim { width, .. } => *width,
             Self::BigOp { width, .. } => *width,
             Self::TextOp { width, .. } => *width,
+            Self::Style { width, .. } => *width,
         }
     }
 
@@ -97,6 +105,7 @@ impl MathBox {
             Self::Delim { height, .. } => *height,
             Self::BigOp { height, .. } => *height,
             Self::TextOp { height, .. } => *height,
+            Self::Style { height, .. } => *height,
         }
     }
 
@@ -112,6 +121,7 @@ impl MathBox {
             Self::Delim { depth, .. } => *depth,
             Self::BigOp { depth, .. } => *depth,
             Self::TextOp { depth, .. } => *depth,
+            Self::Style { depth, .. } => *depth,
         }
     }
 }
