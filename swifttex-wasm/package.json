@@ -5,7 +5,7 @@
   "main": "pkg/swifttex.js",
   "types": "pkg/swifttex.d.ts",
   "style": "style.css",
-  "files": ["pkg/", "react/", "web-component/", "style.css"],
+  "files": ["pkg/", "react/", "web-component/", "vue/", "svelte/", "style.css"],
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -24,7 +24,9 @@
     "./web-component": {
       "types": "./web-component/index.d.ts",
       "default": "./web-component/index.js"
-    }
+    },
+    "./vue": "./vue/SwiftTeX.vue",
+    "./svelte": "./svelte/SwiftTeX.svelte"
   },
   "peerDependencies": {
     "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0"
