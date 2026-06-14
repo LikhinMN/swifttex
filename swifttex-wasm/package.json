@@ -5,7 +5,7 @@
   "main": "pkg/swifttex.js",
   "types": "pkg/swifttex.d.ts",
   "style": "style.css",
-  "files": ["pkg/", "react/", "style.css"],
+  "files": ["pkg/", "react/", "web-component/", "style.css"],
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -20,6 +20,10 @@
     "./react": {
       "types": "./react/index.d.ts",
       "default": "./react/index.js"
+    },
+    "./web-component": {
+      "types": "./web-component/index.d.ts",
+      "default": "./web-component/index.js"
     }
   },
   "peerDependencies": {
