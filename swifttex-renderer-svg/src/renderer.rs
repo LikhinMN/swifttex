@@ -97,9 +97,7 @@ impl SvgRenderer {
                     self.font_size
                 };
                 
-                let mut font_family = if ch.is_ascii_alphabetic() {
-                    "KaTeX_Math"
-                } else if ('α'..='ω').contains(ch) || ('Α'..='Ω').contains(ch) {
+                let mut font_family = if ch.is_ascii_alphabetic() || ('α'..='ω').contains(ch) || ('Α'..='Ω').contains(ch) {
                     "KaTeX_Math"
                 } else {
                     "KaTeX_Main"
