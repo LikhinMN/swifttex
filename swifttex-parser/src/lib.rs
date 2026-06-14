@@ -148,6 +148,24 @@ impl<'a> Parser<'a> {
                 } else if cmd == "sqrt" {
                     let inner = self.parse_group_or_atom().unwrap_or_else(|| Node::Group(vec![]));
                     Some(Node::SquareRoot { inner: Box::new(inner) })
+                } else if cmd == "mathbf" {
+                    let inner = self.parse_group_or_atom().unwrap_or(Node::Group(vec![]));
+                    Some(Node::Style { style: ast::TextStyle::Bold, inner: Box::new(inner) })
+                } else if cmd == "mathcal" {
+                    let inner = self.parse_group_or_atom().unwrap_or(Node::Group(vec![]));
+                    Some(Node::Style { style: ast::TextStyle::Calligraphic, inner: Box::new(inner) })
+                } else if cmd == "mathbb" {
+                    let inner = self.parse_group_or_atom().unwrap_or(Node::Group(vec![]));
+                    Some(Node::Style { style: ast::TextStyle::Blackboard, inner: Box::new(inner) })
+                } else if cmd == "mathrm" {
+                    let inner = self.parse_group_or_atom().unwrap_or(Node::Group(vec![]));
+                    Some(Node::Style { style: ast::TextStyle::Roman, inner: Box::new(inner) })
+                } else if cmd == "mathit" {
+                    let inner = self.parse_group_or_atom().unwrap_or(Node::Group(vec![]));
+                    Some(Node::Style { style: ast::TextStyle::Italic, inner: Box::new(inner) })
+                } else if cmd == "text" {
+                    let inner = self.parse_group_or_atom().unwrap_or(Node::Group(vec![]));
+                    Some(Node::Style { style: ast::TextStyle::Text, inner: Box::new(inner) })
                 } else if let Some(c) = greek_to_char(&cmd) {
                     Some(Node::Symbol(c))
                 } else {
